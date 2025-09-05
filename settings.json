@@ -1,0 +1,500 @@
+{
+	"locality": {
+		"__comment": "Metadata about the locality/jurisdiction itself",
+		"__todo": ["Split up vacant sales by type - maybe use zoning for this", "identify vacant sales", "use zoning for land_category", "empty handling"],
+		"name": "Allegheny county",
+		"county": "Allegheny",
+		"state": "PA",
+		"slug": "us-pa-allegheny",
+		"units": "imperial",
+		"center": {
+			"latitude": 40.478424,
+			"longitude": -79.965235
+		}
+	},
+	"data": {
+		"load": {
+			"__comment": "All tabular and shapefile data should be loaded here. You will reference these files elsewhere by the handles you define for them.",
+			"parcels": {
+				"filename": "parcels.csv",
+				"dupes": "$$ref.dupes",
+				"load": {
+					"key": ["PARCEL_ID", "string"],
+					"address": ["ADDRESS", "string"],
+					"city": ["PROPERTYCITY", "string"],
+					"state": ["PROPERTYSTATE", "string"],
+					"zip_code": ["PROPERTYZIP", "string"],
+					"municipality": ["MUNICIPALITY", "string"],
+					"school": ["SCHOOL", "string"],
+					"legal_desc": ["LEGAL", "string"],
+					"neighborhood": ["NEIGHBORHOOD", "string"],
+					"tax_code": ["TAXCODE", "string"],
+					"tax_sub_code": ["TAXSUBCODE", "string"],
+					"owner_desc": ["OWNER", "string"],
+					"class": ["CLASS", "string"],
+					"use": ["USE", "string"],
+					"land_area_sqft": ["LOTAREA", "float"],
+					"homestead_flag": ["HOMESTEADFLAG", "string"],
+					"farmstead_flag": ["FARMSTEADFLAG", "string"],
+					"clean_green": ["CLEANGREEN", "string"],
+					"abatement_flag": ["ABATEMENTFLAG", "string"],
+					"county_building_assessed": ["COUNTYBUILDING", "float"],
+					"county_land_assessed": ["COUNTYLAND", "float"],
+					"assr_market_value": ["COUNTYTOTAL", "float"],
+					"county_building_exempt_assessed": ["COUNTYEXEMPTBLDG", "float"],
+					"local_building_assessed": ["LOCALBUILDING", "float"],
+					"local_land_assessed": ["LOCALLAND", "float"],
+					"local_total_assessed": ["LOCALTOTAL", "float"],
+					"fair_market_building_assessed": ["FAIRMARKETBUILDING", "float"],
+					"fair_market_land_assessed": ["FAIRMARKETLAND", "float"],
+					"fair_market_total_assessed": ["FAIRMARKETTOTAL", "float"],
+					"style": ["STYLE", "string"],
+					"stories": ["STORIES", "float"],
+					"bldg_year_built": ["YEARBLT", "float"],
+					"exterior_finish": ["EXTERIORFINISH", "string"],
+					"roof_desc": ["ROOF", "string"],
+					"basement_desc": ["BASEMENT", "string"],
+					"quality_grade": ["GRADE", "string"],
+					"condition": ["CONDITION", "string"],
+					"cdu_grade": ["CDU", "string"],
+					"total_rooms": ["TOTALROOMS", "float"],
+					"bedrooms": ["BEDROOMS", "float"],
+					"full_baths": ["FULLBATHS", "float"],
+					"half_baths": ["HALFBATHS", "float"],
+					"heating_cooling": ["HEATINGCOOLING", "string"],
+					"fireplaces": ["FIREPLACES", "float"],
+					"basement_garage": ["BSMTGARAGE", "float"],
+					"finished_living_area_sqft": ["FINISHEDLIVINGAREA", "float"],
+					"card_number": ["CARDNUMBER", "string"],
+					"alt_id": ["ALT_ID", "string"],
+					"bldg_area_finished_sqft": ["FINISHEDAREA", "float"]
+				}
+			},
+			"sales": {
+				"filename": "sales.csv",
+				"load": {
+					"key": ["PARCEL_ID", "string"],
+					"record_date": ["RECORDDATE", "datetime", "%m-%d-%Y"],
+					"sale_date": ["SALEDATE", "datetime", "%m-%d-%Y"],
+					"sale_year": ["SALEYEAR", "float"],
+					"sale_price": ["SALEPRICE", "float"],
+					"sale_code": ["SALECODE", "string"],
+					"deed_book": ["DEEDBOOK", "string"],
+					"deed_page": ["DEEDPAGE", "string"],
+					"change_address_1": ["CHANGENOTICEADDRESS1", "string"],
+					"change_address_2": ["CHANGENOTICEADDRESS2", "string"],
+					"change_address_3": ["CHANGENOTICEADDRESS3", "string"],
+					"change_address_4": ["CHANGENOTICEADDRESS4", "string"],
+					"use": ["USE", "string"]
+				},
+				"calc": {
+					"key_sale": ["join",
+						["values",
+							"PARCEL_ID",
+							["asstr", ["datetimestr", "SALEDATE", "str:%m-%d-%Y"]]
+						], "str:---"
+					],
+					"deed_id": ["join",
+						["values",
+							"DEEDBOOK","DEEDPAGE"
+						], "str:---"
+					],
+					"valid_sale": ["?", ["==", "SALECODE", "str:0 VALID SALE"]],
+					"vacant_sale": ["?", ["==", "USE", "str:100 VACANT LAND"]]
+				}
+			},
+			"geo_parcels": {
+				"_comment1": "You can (and should) provide shapefiles right alongside all the rest of your files",
+				"_comment2": "geo_parcels is always expected to exist, or an error will be raised",
+				"filename": "geo/parcels.parquet",
+				"dupes": "$$ref.dupes",
+				"load": {
+					"__comment": "For shapefiles, you don't have to specifically load the 'geometry' column, it's automatically included",
+					"key": "PARCEL_ID"
+				}
+			},
+			"census_tracts": {
+				"filename": "geo/census_tracts.parquet",
+				"dupes": "auto",
+				"load": {
+					"census_tract": "CENSUS_TRACT"
+				}
+			}
+		},
+		"process": {
+			"__": "These operations actually assemble your data. 'merge' will assemble your base dataframes from your individual data sources, and 'enrich' will derive data that can be calculated from the base fields.",
+			"merge": {
+				"__": "You MUST define merge lists for 'universe' and 'sales'. Each takes a list, whose entries can be strings or objects. If they are strings, they are assumed to be the ID of a loaded dataframe, and it will assume default merge logic (how='left', on='key'). If you want to specify alternate logic, provide an object with 'id', 'how', and 'on' keys.",
+
+				"universe": ["parcels"],
+				"sales": ["sales"]
+			},
+			"dupes": {
+				"universe": "$$ref.dupes",
+				"sales": "$$ref.dupes_key_sale"
+			},
+			"enrich": {
+				"__": "Here you provide a list of operations to derive additional data from sources you've already loaded.",
+				"__2": "There are 3 top level keys: 'universe', 'sales', and 'both', specifying which subsets the contained operations should run on.",
+				"__3": "Most things that reflect current characteristics you will only want to enrich on the universe",
+
+				"universe": {
+
+					"__0": "For open street map, provide a list of keyed entries corresponding to classes of things you would like to download and enrich by. These will automatically calculate distance to these things.",
+
+					"openstreetmap": {
+						"enabled": false
+					},
+
+					"__1": "For distances, provide a list of strings and/or objects. Strings are interpreted as the IDs of loaded shapefiles. Objects must have an 'id' key, and optionally a 'field' key. If a 'field' key is provided, distances will be calculated for each row in the shapefile corresponding to a unique value for that field.",
+
+					"distances": [
+					],
+
+					"__2": "For geometry, provide a list of strings and/or objects, these represent spatial joins. Strings are interpreted as the IDs of loaded shapefiles. Objects must have these keys: 'id', and 'predicate', where 'predicate' is the name of the spatial join function to use.",
+
+					"geometry": [
+						"census_tracts"
+					],
+
+					"__3": "For reference tables, you provide a pair of keys (key_ref_tables/key_target) to match on. Then, for every matching unique value, the reference table looks up associated values for the columns you specify in 'add_fields' and adds them on.",
+
+					"ref_tables": [
+					],
+
+					"__4": "For calculations, this uses the same format as those performed at load time. These specifically happen after all other merge, spatial join, and enrichment operations have been done, so you can operate on all the derived data fields as well.",
+
+					"calc": {
+					}
+				}
+			},
+			"fill": {
+				"false": [
+					"valid_sale"
+				],
+				"true": [
+					"vacant_sale"
+				],
+				"zero": [
+				],
+				"none": [
+					"homestead_flag",
+					"farmstead_flag",
+					"clean_green",
+					"abatement_flag"
+				],
+				"unknown": [
+					"city",
+					"state",
+					"zip_code",
+					"municipality",
+					"school",
+					"legal_desc",
+					"neighborhood",
+					"tax_code",
+					"tax_sub_code",
+					"owner_desc",
+					"class",
+					"use",
+					"alt_id",
+					"sale_code",
+					"style",
+					"exterior_finish",
+					"roof_desc",
+					"basement_desc",
+					"quality_grade",
+					"condition",
+					"cdu_grade",
+					"heating_cooling"
+				],
+				"median": [
+				],
+				"zero_impr": [
+					"land_area_sqft",
+					"stories",
+					"bldg_year_built",
+					"total_rooms",
+					"bedrooms",
+					"full_baths",
+					"half_baths",
+					"fireplaces",
+					"basement_garage",
+					"finished_living_area_sqft"
+				],
+				"mode_impr": [
+				],
+				"zero_vacant": [
+					"land_area_sqft",
+					"stories",
+					"bldg_year_built",
+					"total_rooms",
+					"bedrooms",
+					"full_baths",
+					"half_baths",
+					"fireplaces",
+					"basement_garage",
+					"finished_living_area_sqft"
+				],
+				"none_vacant": [
+					"style",
+					"exterior_finish",
+					"roof_desc",
+					"basement_desc",
+					"quality_grade",
+					"condition",
+					"cdu_grade",
+					"heating_cooling"
+				]
+			},
+			"reconcile": {
+				"__comment": "Different dataframes sometimes have the same keys, and you might need both to create a complete record. However, if you naively merge the two sets together you'll just get extra columns. Also, you might want to specify a priority order to resolve conflicts."
+			}
+		}
+	},
+	"modeling": {
+		"try_variables": {
+			"variables": [
+				"land_area_sqft",
+				"stories",
+				"bldg_year_built",
+				"total_rooms",
+				"bedrooms",
+				"full_baths",
+				"half_baths",
+				"fireplaces",
+				"basement_garage",
+				"finished_living_area_sqft"
+			]
+		},
+		"metadata": {
+			"valuation_date": "2025-01-01",
+			"use_sales_from": 2020,
+			"test_sales_from": 2024,
+			"modeler": "<MODELER NAME HERE>",
+			"modeler_nick": "<MODELER NICKNAME HERE>"
+		},
+		"instructions": {
+			"main": {
+				"run": ["assessor", "mra", "local_sqft", "lightgbm", "xgboost", "catboost", "spatial_lag_sqft"],
+				"stacked_ensemble": {
+					"enabled": true,
+					"meta_model": "ridge",
+					"models_to_include": ["mra", "local_sqft", "lightgbm", "xgboost", "catboost", "spatial_lag_sqft"],
+					"contextual_features": [],
+					"categorical_contextual_features": [],
+					"validation_fraction": 0.2
+				}
+			},
+			"vacant": {
+				"__run": ["assessor", "gwr", "mra", "lightgbm", "catboost", "xgboost", "local_sqft"],
+				"run": ["assessor", "mra", "local_sqft", "lightgbm", "catboost", "xgboost", "gwr"],
+				"stacked_ensemble": {
+					"enabled": true,
+					"meta_model": "ridge",
+					"models_to_include": ["mra", "local_sqft", "lightgbm", "catboost", "xgboost", "spatial_lag_sqft"],
+					"contextual_features": [],
+					"categorical_contextual_features": [],
+					"validation_fraction": 0.2
+				}
+			},
+			"time_adjustment": {
+				"period": "Q"
+			},
+			"allocation": {
+				"hedonic": ["assessor",  "stacked_ensemble"],
+				"vacant": ["local_sqft", "spatial_lag_sqft"],
+				"plot": {
+
+				}
+			},
+			"model_group_order": [
+				"vacant",
+				"residential_small",
+				"residential_large",
+				"agricultural",
+				"industrial",
+				"commercial",
+				"commercial_housing",
+				"office",
+				"public"
+			]
+		},
+		"models": {
+			"main": {
+				"default": {
+					"ind_vars": [
+						"finished_living_area_sqft",
+						"land_area_sqft",
+						"bldg_year_built"
+					]
+				},
+				"gwr": {
+					"ind_vars": [
+						"finished_living_area_sqft",
+						"bldg_year_built",
+						"land_area_sqft"
+					]
+				}
+			},
+			"vacant": {
+				"default": {
+					"ind_vars": [
+						"land_area_sqft"
+					]
+				},
+				"gwr": {
+					"ind_vars": [
+						"land_area_sqft"
+					]
+				}
+			}
+		},
+		"model_groups": {
+			"__comment": "",
+			"vacant": {
+				"name": "Vacant land",
+				"filter": ["or", "$$ref.filters.is_vacant"]
+			},
+			"residential_small": {
+				"name": "Small residential",
+				"filter": ["or", "$$ref.filters.residential_small"]
+			},
+			"residential_large": {
+				"name": "Large residential",
+				"filter": ["or", "$$ref.filters.residential_large"]
+			},
+			"agricultural": {
+				"name": "Agricultural",
+				"filter": ["or", "$$ref.filters.agricultural"]
+			},
+			"industrial": {
+				"name": "Industrial",
+				"filter": ["or", "$$ref.filters.industrial"]
+			},
+			"commercial": {
+				"name": "Commercial",
+				"filter": ["or", "$$ref.filters.commercial"]
+			},
+			"commercial_housing": {
+				"name": "Commercial housing",
+				"filter": ["or", "$$ref.filters.commercial_housing"]
+			},
+			"office": {
+				"name": "Office",
+				"filter": ["or", "$$ref.filters.office"]
+			},
+			"public": {
+				"name": "Public",
+				"filter": ["or", "$$ref.filters.public"]
+			}
+		}
+	},
+	"analysis": {
+		"ratio_study": {
+			"look_back_years": 1,
+			"breakdowns": [
+				{"by": "sale_price", "quantiles": 10},
+				{"by": "finished_living_area_sqft", "quantiles": 10},
+				{"by": "bldg_year_built", "slice_size": 10},
+				{"by": "land_area_sqft", "quantiles":  10},
+				{"by": "<loc_neighborhood>"},
+				{"by": "<loc_market_area>"},
+				{"by": "<loc_region>"}
+			]
+		}
+	},
+	"field_classification": {
+		"important": {
+			"fields": {
+				"impr_category": "use",
+				"land_category": "class",
+				"loc_neighborhood": "neighborhood",
+				"loc_market_area": "census_tract",
+				"loc_region": "school"
+			},
+			"locations": [
+				"neighborhood",
+				"census_tract",
+				"zip_code",
+				"school",
+				"city"
+			],
+			"report_locations": [
+				"census_tract",
+				"school",
+				"city"
+			]
+		},
+		"land": {
+			"numeric": [
+			],
+			"categorical": [
+			]
+		},
+		"impr": {
+			"numeric": [
+				"county_building_assessed",
+				"local_building_assessed",
+				"fair_market_building_assessed",
+				"stories",
+				"bldg_year_built",
+				"bedrooms",
+				"full_baths",
+				"half_baths"
+			],
+			"categorical": [
+				"basement_desc",
+				"quality_grade",
+				"condition",
+				"cdu_grade",
+				"heating_cooling"
+			]
+		},
+		"other": {
+			"categorical": [
+				"owner"
+			]
+		}
+	},
+	"data_dictionary": {
+
+	},
+	"ref": {
+		"calc": {
+		},
+		"filters": {
+			"is_vacant": ["or",
+				["isin", "use", ["098 CONDEMNED/BOARDED-UP", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]]
+			],
+			"residential_small":  ["or",
+				["isin", "use", ["010 SINGLE FAMILY", "020 TWO FAMILY", "030 THREE FAMILY", "040 FOUR FAMILY", "060 TOWNHOUSE", "070 ROWHOUSE", "080 MOBILE HOME", "090 MOBILE HOME (IN PARK)", "099 RES AUX BUILDING (NO HOUSE)", "130 RIGHT OF WAY - RESIDENTIAL", "131 RETENTION POND - RESIDENTIAL", "415 MOBILE HOMES/TRAILER PKS"]]
+			],
+			"residential_large":  ["or",
+				["isin", "use", ["050 CONDOMINIUM", "055 COMMON AREA", "056 CONDO DEVELOPMENTAL LAND", "057 CONDO GARAGE UNITS", "118 CONDOMINIUM COMMON PROPERTY", "401 APART: 5-19 UNITS", "402 APART:20-39 UNITS", "403 APART:40+ UNITS", "472 DWG APT CONVERSION", "550 CONDOMINIUM UNIT", "553 H.O.A RECREATIONS AREA", "557 COMM APRTM CONDOS 5-19 UNITS", "558 COMM APRTM CONDOS 20-39 UNITS", "559 COMM APRTM CONDOS 40+ UNITS", "599 OTHER RESIDENTIAL STRUCTURE"]]
+			],
+			"agricultural":  ["or",
+				["isin", "use", ["101 GENERAL FARM", "102 LIVE STOCK FARM", "103 DAIRY FARM", "104 POULTRY FARM", "106 VEGETABLE FARM", "108 NURSERY", "109 GREENHOUSES, VEG & FLORACULTURE", "112 LIVESTOCK O/T D & P-CAUV", "120 TIMBER OR FOREST LAND", "199 OTHER AGRICULTURAL - CAUV"]]
+			],
+			"industrial":  ["or",
+				["isin", "use", ["210 COAL LAND, SURFACE RIGHTS", "220 COAL RIGHTS, WORKING INTERESTS", "230 COAL RIGHTS SEP. ROYALTY INTEREST", "240 OIL & GAS RIGHTS WORKING INTEREST", "260 OTHER MINERALS", "310 FOOD & DRINK PROCESSING", "317 FORESTRY WITH BUILDING", "320 HEAVY MANUFACTURING", "330 MEDIUM MANUFACTURING", "340 LIGHT MANUFACTURING", "341 RECYCLING/SCRAP YARDS", "345 BULK TRANSFER TERMINAL", "350 WAREHOUSE", "351 WAREHOUSE/MULTI-TENANT", "352 MINI WAREHOUSE", "353 DISTRIBUTION WAREHOUSE", "360 INDUSTRIAL TRUCK TERM", "380 MINES AND QUARRIES", "389 INDUSTRIAL/UTILITY", "399 OTHER", "474 HEAVY EQUIPMENT SALES/RENTAL", "480 OFFICE/WAREHOUSE", "481 OTHER COMMERCIAL", "482 COMMERCIAL TRUCK TERMINAL", "488 AIR RIGHTS", "489 COMMERCIAL/UTILITY", "490 MARINE SERV FACILITY", "517 FORESTRY W/BUILDINGS", "810 MINERAL LAND", "820 INDUSTRIAL LAND", "830 COMMERCIAL LAND"]]
+			],
+			"commercial":  ["or",
+				["isin", "use", ["370 SMALL SHOP", "404 RETL/APT'S OVER", "405 RETL/OFF OVER", "406 RETL/STOR OVER", "420 SMALL DETACHED RET(UNDER 10000)", "421 SUPERMARKETS", "422 DISCOUNT STORE", "423 PHARMACY (CHAIN)", "424 DEPARTMENT STORE", "425 NEIGH SHOP CENTER", "426 COMMUNITY SHOPPING CENTER", "427 REGIONAL SHOPPING CENTER", "429 OTHER RETAIL STRUCTURES", "430 RESTAURANT, CAFET AND/OR BAR", "434 BARS", "435 DRIVE IN REST OR FOOD SERVICE", "437 FAST FOOD/DRIVE THRU WINDOW", "439 OTHER FOOD SERVICE", "440 DRY CLEANING PLANTS/LAUNDRIES", "441 FUNERAL HOMES", "442 MEDICAL CLINICS/OFFICES", "444 BANK", "445 SAVINGS AND LOANS", "451 FIRE DEPARTMENT/EMS", "452 AUTO SERV STATION", "453 CAR WASH", "454 AUTO SALES & SERVICE", "455 COMMERCIAL GARAGE", "456 PARKING GARAGE/LOTS", "458 GAS STATION KIOSK", "460 THEATER", "461 COUNTRY CLUBS", "462 GOLF DRIVING RANGE/MINIATURE", "463 GOLF COURSES (PUBLIC)", "464 BOWLING ALLEYS/REC FACILITY", "465 LODGE HALL/AMUSEMENT PARK", "471 DWG USED AS RETAIL", "491 CONVENIENCE STORE", "492 CONVENIENCE STORE/GAS", "493 CONVENIENCE STORE GAS/REPAIRS", "494 BIG BOX RETAIL", "496 MARINA", "499 COMM AUX BUILDING", "530 RIGHT OF WAY - COMMERCIAL", "531 RETENTION POND - COMMERCIAL", "750 CASINO", "777 INCOME PRODUCING PARKING LOT"]]
+			],
+			"commercial_housing":  ["or",
+				["isin", "use", ["409 BED & BREAKFAST", "410 MOTEL & TOURIST CABINS", "411 HOTELS", "412 NURSING HOME/PRIVATE HOS", "413 INDEPENDENT LIVING (SENIORS)", "416 CAMPGROUNDS", "418 DAYCARE/PRIVATE SCHOOL", "419 OTHER COMMERCIAL HOUSING", "473 GROUP HOME"]]
+			],
+			"office":  ["or",
+				["isin", "use", ["431 OFFICE/APARTMENTS OVER", "432 OFFICE/RETAIL OVER", "433 OFFICE/STORAGE OVER", "447 OFFICE - 1-2 STORIES", "448 OFFICE-WALKUP -3 + STORIES", "449 OFFICE-ELEVATOR -3 + STORIES", "450 CONDOMINIUM OFFICE BUILDING", "470 DWG USED AS OFFICE"]]
+			],
+			"public":  ["or",
+				["isin", "use", ["556 COMMON AREA OR GREENBELT", "600 FEDERAL GOVERNMENT", "601 HUD PROJ #202", "602 HUD PROJ #207/223", "605 HUD PROJ #221", "607 HUD PROJ #232", "609 HUD PROJ #236", "610 STATE GOVERNMENT", "620 COUNTY GOVERNMENT", "630 TOWNSHIP GOVERNMENT", "640 MUNICIPAL GOVERNMENT", "645 OWNED BY METRO HOUSING AU", "650 OWNED BY BOARD OF EDUCATION", "660 PUBLIC PARK", "670 OWNED BY COLLEGE/UNIV/ACADEMY", "680 CHARITABLE EXEMPTION/HOS/HOMES", "685 CHURCHES, PUBLIC WORSHIP", "690 CEMETERY/MONUMENTS", "700 COMMUNITY URBAN RENEWAL", "710 COMMUNITY REINVESTMENT", "720 MUNICIPAL IMPROVEMENT", "730 MUNICIPAL URBAN RENEWAL", "740 OTHER", "840 R.R. - USED IN OPERATION", "850 R.R. - NOT USED IN OPERATION", "880 P.P. - P.U. - OTHER THAN R.R."]]
+			]
+		},
+		"dupes_key_sale": {
+			"subset": ["key_sale"],
+			"sort_by": ["key_sale", "asc"],
+			"drop": true
+		}
+	}
+}
