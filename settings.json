@@ -1,7 +1,7 @@
 {
 	"locality": {
 		"__comment": "Metadata about the locality/jurisdiction itself",
-		"__todo": ["Split up vacant sales by type - maybe use zoning for this", "identify vacant sales", "use zoning for land_category", "empty handling"],
+		"__todo": ["Add back spatial_lag_sqft model (removed because it was throwing error)","Model groups should be more granular - would like to use zoning for this", "Using current status to identify vacant sales - would be better to determine if land was vacant when sale actually took place", "empty handling"],
 		"name": "Allegheny county",
 		"county": "Allegheny",
 		"state": "PA",
@@ -38,8 +38,8 @@
 					"farmstead_flag": ["FARMSTEADFLAG", "string"],
 					"clean_green": ["CLEANGREEN", "string"],
 					"abatement_flag": ["ABATEMENTFLAG", "string"],
-					"county_building_assessed": ["COUNTYBUILDING", "float"],
-					"county_land_assessed": ["COUNTYLAND", "float"],
+					"assr_impr_value": ["COUNTYBUILDING", "float"],
+					"assr_land_value": ["COUNTYLAND", "float"],
 					"assr_market_value": ["COUNTYTOTAL", "float"],
 					"county_building_exempt_assessed": ["COUNTYEXEMPTBLDG", "float"],
 					"local_building_assessed": ["LOCALBUILDING", "float"],
@@ -55,7 +55,9 @@
 					"roof_desc": ["ROOF", "string"],
 					"basement_desc": ["BASEMENT", "string"],
 					"quality_grade": ["GRADE", "string"],
+					"quality_grade_num": ["GRADENUM", "float"],
 					"condition": ["CONDITION", "string"],
+					"condition_num": ["CONDITIONNUM", "float"],
 					"cdu_grade": ["CDU", "string"],
 					"total_rooms": ["TOTALROOMS", "float"],
 					"bedrooms": ["BEDROOMS", "float"],
@@ -74,8 +76,8 @@
 				"filename": "sales.csv",
 				"load": {
 					"key": ["PARCEL_ID", "string"],
-					"record_date": ["RECORDDATE", "datetime", "%m-%d-%Y"],
-					"sale_date": ["SALEDATE", "datetime", "%m-%d-%Y"],
+					"record_date": ["RECORDDATE", "string", "%m-%d-%Y"],
+					"sale_date": ["SALEDATE", "string", "%m-%d-%Y"],
 					"sale_year": ["SALEYEAR", "float"],
 					"sale_price": ["SALEPRICE", "float"],
 					"sale_code": ["SALECODE", "string"],
@@ -100,7 +102,7 @@
 						], "str:---"
 					],
 					"valid_sale": ["?", ["==", "SALECODE", "str:0 VALID SALE"]],
-					"vacant_sale": ["?", ["==", "USE", "str:100 VACANT LAND"]]
+					"vacant_sale": ["?", ["isin", "use", ["098 CONDEMNED/BOARDED-UP", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]]]
 				}
 			},
 			"geo_parcels": {
@@ -208,6 +210,8 @@
 					"heating_cooling"
 				],
 				"median": [
+					"quality_grade_num",
+					"condition_num"
 				],
 				"zero_impr": [
 					"land_area_sqft",
@@ -263,7 +267,9 @@
 				"half_baths",
 				"fireplaces",
 				"basement_garage",
-				"finished_living_area_sqft"
+				"finished_living_area_sqft",
+				"quality_grade_num",
+				"condition_num"
 			]
 		},
 		"metadata": {
@@ -275,11 +281,11 @@
 		},
 		"instructions": {
 			"main": {
-				"run": ["assessor", "mra", "local_sqft", "lightgbm", "xgboost", "catboost", "spatial_lag_sqft"],
+				"run": ["assessor", "mra", "local_sqft", "lightgbm", "xgboost", "catboost"],
 				"stacked_ensemble": {
 					"enabled": true,
 					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_sqft", "lightgbm", "xgboost", "catboost", "spatial_lag_sqft"],
+					"models_to_include": ["mra", "local_sqft", "lightgbm", "xgboost", "catboost"],
 					"contextual_features": [],
 					"categorical_contextual_features": [],
 					"validation_fraction": 0.2
@@ -291,7 +297,7 @@
 				"stacked_ensemble": {
 					"enabled": true,
 					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_sqft", "lightgbm", "catboost", "xgboost", "spatial_lag_sqft"],
+					"models_to_include": ["mra", "local_sqft", "lightgbm", "catboost", "xgboost"],
 					"contextual_features": [],
 					"categorical_contextual_features": [],
 					"validation_fraction": 0.2
@@ -302,37 +308,49 @@
 			},
 			"allocation": {
 				"hedonic": ["assessor",  "stacked_ensemble"],
-				"vacant": ["local_sqft", "spatial_lag_sqft"],
+				"vacant": ["local_sqft"],
 				"plot": {
 
 				}
 			},
 			"model_group_order": [
-				"vacant",
-				"residential_small",
-				"residential_large",
-				"agricultural",
-				"industrial",
 				"commercial",
-				"commercial_housing",
-				"office",
-				"public"
+				"residential",
+				"industrial_agricultural_other"
 			]
 		},
 		"models": {
 			"main": {
 				"default": {
 					"ind_vars": [
-						"finished_living_area_sqft",
 						"land_area_sqft",
-						"bldg_year_built"
+						"stories",
+						"bldg_year_built",
+						"total_rooms",
+						"bedrooms",
+						"full_baths",
+						"half_baths",
+						"fireplaces",
+						"basement_garage",
+						"finished_living_area_sqft",
+						"quality_grade_num",
+						"condition_num"
 					]
 				},
 				"gwr": {
 					"ind_vars": [
-						"finished_living_area_sqft",
+						"land_area_sqft",
+						"stories",
 						"bldg_year_built",
-						"land_area_sqft"
+						"total_rooms",
+						"bedrooms",
+						"full_baths",
+						"half_baths",
+						"fireplaces",
+						"basement_garage",
+						"finished_living_area_sqft",
+						"quality_grade_num",
+						"condition_num"
 					]
 				}
 			},
@@ -351,41 +369,17 @@
 		},
 		"model_groups": {
 			"__comment": "",
-			"vacant": {
-				"name": "Vacant land",
-				"filter": ["or", "$$ref.filters.is_vacant"]
-			},
-			"residential_small": {
-				"name": "Small residential",
-				"filter": ["or", "$$ref.filters.residential_small"]
-			},
-			"residential_large": {
-				"name": "Large residential",
-				"filter": ["or", "$$ref.filters.residential_large"]
-			},
-			"agricultural": {
-				"name": "Agricultural",
-				"filter": ["or", "$$ref.filters.agricultural"]
-			},
-			"industrial": {
-				"name": "Industrial",
-				"filter": ["or", "$$ref.filters.industrial"]
-			},
 			"commercial": {
 				"name": "Commercial",
 				"filter": ["or", "$$ref.filters.commercial"]
 			},
-			"commercial_housing": {
-				"name": "Commercial housing",
-				"filter": ["or", "$$ref.filters.commercial_housing"]
+			"residential": {
+				"name": "Residential",
+				"filter": ["or", "$$ref.filters.residential"]
 			},
-			"office": {
-				"name": "Office",
-				"filter": ["or", "$$ref.filters.office"]
-			},
-			"public": {
-				"name": "Public",
-				"filter": ["or", "$$ref.filters.public"]
+			"industrial_agricultural_other": {
+				"name": "Industrial/Agricultural/Miscellaneous",
+				"filter": ["or", "$$ref.filters.industrial_agricultural_other"]
 			}
 		}
 	},
@@ -433,7 +427,7 @@
 		},
 		"impr": {
 			"numeric": [
-				"county_building_assessed",
+				"assr_impr_value",
 				"local_building_assessed",
 				"fair_market_building_assessed",
 				"stories",
@@ -463,32 +457,14 @@
 		"calc": {
 		},
 		"filters": {
-			"is_vacant": ["or",
-				["isin", "use", ["098 CONDEMNED/BOARDED-UP", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]]
-			],
-			"residential_small":  ["or",
-				["isin", "use", ["010 SINGLE FAMILY", "020 TWO FAMILY", "030 THREE FAMILY", "040 FOUR FAMILY", "060 TOWNHOUSE", "070 ROWHOUSE", "080 MOBILE HOME", "090 MOBILE HOME (IN PARK)", "099 RES AUX BUILDING (NO HOUSE)", "130 RIGHT OF WAY - RESIDENTIAL", "131 RETENTION POND - RESIDENTIAL", "415 MOBILE HOMES/TRAILER PKS"]]
-			],
-			"residential_large":  ["or",
-				["isin", "use", ["050 CONDOMINIUM", "055 COMMON AREA", "056 CONDO DEVELOPMENTAL LAND", "057 CONDO GARAGE UNITS", "118 CONDOMINIUM COMMON PROPERTY", "401 APART: 5-19 UNITS", "402 APART:20-39 UNITS", "403 APART:40+ UNITS", "472 DWG APT CONVERSION", "550 CONDOMINIUM UNIT", "553 H.O.A RECREATIONS AREA", "557 COMM APRTM CONDOS 5-19 UNITS", "558 COMM APRTM CONDOS 20-39 UNITS", "559 COMM APRTM CONDOS 40+ UNITS", "599 OTHER RESIDENTIAL STRUCTURE"]]
-			],
-			"agricultural":  ["or",
-				["isin", "use", ["101 GENERAL FARM", "102 LIVE STOCK FARM", "103 DAIRY FARM", "104 POULTRY FARM", "106 VEGETABLE FARM", "108 NURSERY", "109 GREENHOUSES, VEG & FLORACULTURE", "112 LIVESTOCK O/T D & P-CAUV", "120 TIMBER OR FOREST LAND", "199 OTHER AGRICULTURAL - CAUV"]]
-			],
-			"industrial":  ["or",
-				["isin", "use", ["210 COAL LAND, SURFACE RIGHTS", "220 COAL RIGHTS, WORKING INTERESTS", "230 COAL RIGHTS SEP. ROYALTY INTEREST", "240 OIL & GAS RIGHTS WORKING INTEREST", "260 OTHER MINERALS", "310 FOOD & DRINK PROCESSING", "317 FORESTRY WITH BUILDING", "320 HEAVY MANUFACTURING", "330 MEDIUM MANUFACTURING", "340 LIGHT MANUFACTURING", "341 RECYCLING/SCRAP YARDS", "345 BULK TRANSFER TERMINAL", "350 WAREHOUSE", "351 WAREHOUSE/MULTI-TENANT", "352 MINI WAREHOUSE", "353 DISTRIBUTION WAREHOUSE", "360 INDUSTRIAL TRUCK TERM", "380 MINES AND QUARRIES", "389 INDUSTRIAL/UTILITY", "399 OTHER", "474 HEAVY EQUIPMENT SALES/RENTAL", "480 OFFICE/WAREHOUSE", "481 OTHER COMMERCIAL", "482 COMMERCIAL TRUCK TERMINAL", "488 AIR RIGHTS", "489 COMMERCIAL/UTILITY", "490 MARINE SERV FACILITY", "517 FORESTRY W/BUILDINGS", "810 MINERAL LAND", "820 INDUSTRIAL LAND", "830 COMMERCIAL LAND"]]
+			"residential":  ["or",
+				["isin", "class", ["R RESIDENTIAL"]]
 			],
 			"commercial":  ["or",
-				["isin", "use", ["370 SMALL SHOP", "404 RETL/APT'S OVER", "405 RETL/OFF OVER", "406 RETL/STOR OVER", "420 SMALL DETACHED RET(UNDER 10000)", "421 SUPERMARKETS", "422 DISCOUNT STORE", "423 PHARMACY (CHAIN)", "424 DEPARTMENT STORE", "425 NEIGH SHOP CENTER", "426 COMMUNITY SHOPPING CENTER", "427 REGIONAL SHOPPING CENTER", "429 OTHER RETAIL STRUCTURES", "430 RESTAURANT, CAFET AND/OR BAR", "434 BARS", "435 DRIVE IN REST OR FOOD SERVICE", "437 FAST FOOD/DRIVE THRU WINDOW", "439 OTHER FOOD SERVICE", "440 DRY CLEANING PLANTS/LAUNDRIES", "441 FUNERAL HOMES", "442 MEDICAL CLINICS/OFFICES", "444 BANK", "445 SAVINGS AND LOANS", "451 FIRE DEPARTMENT/EMS", "452 AUTO SERV STATION", "453 CAR WASH", "454 AUTO SALES & SERVICE", "455 COMMERCIAL GARAGE", "456 PARKING GARAGE/LOTS", "458 GAS STATION KIOSK", "460 THEATER", "461 COUNTRY CLUBS", "462 GOLF DRIVING RANGE/MINIATURE", "463 GOLF COURSES (PUBLIC)", "464 BOWLING ALLEYS/REC FACILITY", "465 LODGE HALL/AMUSEMENT PARK", "471 DWG USED AS RETAIL", "491 CONVENIENCE STORE", "492 CONVENIENCE STORE/GAS", "493 CONVENIENCE STORE GAS/REPAIRS", "494 BIG BOX RETAIL", "496 MARINA", "499 COMM AUX BUILDING", "530 RIGHT OF WAY - COMMERCIAL", "531 RETENTION POND - COMMERCIAL", "750 CASINO", "777 INCOME PRODUCING PARKING LOT"]]
+				["isin", "class", ["C COMMERCIAL"]]
 			],
-			"commercial_housing":  ["or",
-				["isin", "use", ["409 BED & BREAKFAST", "410 MOTEL & TOURIST CABINS", "411 HOTELS", "412 NURSING HOME/PRIVATE HOS", "413 INDEPENDENT LIVING (SENIORS)", "416 CAMPGROUNDS", "418 DAYCARE/PRIVATE SCHOOL", "419 OTHER COMMERCIAL HOUSING", "473 GROUP HOME"]]
-			],
-			"office":  ["or",
-				["isin", "use", ["431 OFFICE/APARTMENTS OVER", "432 OFFICE/RETAIL OVER", "433 OFFICE/STORAGE OVER", "447 OFFICE - 1-2 STORIES", "448 OFFICE-WALKUP -3 + STORIES", "449 OFFICE-ELEVATOR -3 + STORIES", "450 CONDOMINIUM OFFICE BUILDING", "470 DWG USED AS OFFICE"]]
-			],
-			"public":  ["or",
-				["isin", "use", ["556 COMMON AREA OR GREENBELT", "600 FEDERAL GOVERNMENT", "601 HUD PROJ #202", "602 HUD PROJ #207/223", "605 HUD PROJ #221", "607 HUD PROJ #232", "609 HUD PROJ #236", "610 STATE GOVERNMENT", "620 COUNTY GOVERNMENT", "630 TOWNSHIP GOVERNMENT", "640 MUNICIPAL GOVERNMENT", "645 OWNED BY METRO HOUSING AU", "650 OWNED BY BOARD OF EDUCATION", "660 PUBLIC PARK", "670 OWNED BY COLLEGE/UNIV/ACADEMY", "680 CHARITABLE EXEMPTION/HOS/HOMES", "685 CHURCHES, PUBLIC WORSHIP", "690 CEMETERY/MONUMENTS", "700 COMMUNITY URBAN RENEWAL", "710 COMMUNITY REINVESTMENT", "720 MUNICIPAL IMPROVEMENT", "730 MUNICIPAL URBAN RENEWAL", "740 OTHER", "840 R.R. - USED IN OPERATION", "850 R.R. - NOT USED IN OPERATION", "880 P.P. - P.U. - OTHER THAN R.R."]]
+			"industrial_agricultural_other":  ["or",
+				["isin", "class", ["I INDUSTRIAL", "F AGRICULTURAL", "G GOVERNMENT", "U UTILITIES", "O OTHER"]]
 			]
 		},
 		"dupes_key_sale": {
