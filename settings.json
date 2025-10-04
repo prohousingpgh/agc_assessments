@@ -136,38 +136,31 @@
 				"sales": "$$ref.dupes_key_sale"
 			},
 			"enrich": {
-				"__": "Here you provide a list of operations to derive additional data from sources you've already loaded.",
-				"__2": "There are 3 top level keys: 'universe', 'sales', and 'both', specifying which subsets the contained operations should run on.",
-				"__3": "Most things that reflect current characteristics you will only want to enrich on the universe",
+				"__0": "For open street map, provide a list of keyed entries corresponding to classes of things you would like to download and enrich by. These will automatically calculate distance to these things.",
 
-				"universe": {
+				"openstreetmap": {
+					"enabled": false
+				},
 
-					"__0": "For open street map, provide a list of keyed entries corresponding to classes of things you would like to download and enrich by. These will automatically calculate distance to these things.",
+				"__1": "For distances, provide a list of strings and/or objects. Strings are interpreted as the IDs of loaded shapefiles. Objects must have an 'id' key, and optionally a 'field' key. If a 'field' key is provided, distances will be calculated for each row in the shapefile corresponding to a unique value for that field.",
 
-					"openstreetmap": {
-						"enabled": false
-					},
+				"distances": [
+				],
 
-					"__1": "For distances, provide a list of strings and/or objects. Strings are interpreted as the IDs of loaded shapefiles. Objects must have an 'id' key, and optionally a 'field' key. If a 'field' key is provided, distances will be calculated for each row in the shapefile corresponding to a unique value for that field.",
+				"__2": "For geometry, provide a list of strings and/or objects, these represent spatial joins. Strings are interpreted as the IDs of loaded shapefiles. Objects must have these keys: 'id', and 'predicate', where 'predicate' is the name of the spatial join function to use.",
 
-					"distances": [
-					],
+				"geometry": [
+					"census_tracts"
+				],
 
-					"__2": "For geometry, provide a list of strings and/or objects, these represent spatial joins. Strings are interpreted as the IDs of loaded shapefiles. Objects must have these keys: 'id', and 'predicate', where 'predicate' is the name of the spatial join function to use.",
+				"__3": "For reference tables, you provide a pair of keys (key_ref_tables/key_target) to match on. Then, for every matching unique value, the reference table looks up associated values for the columns you specify in 'add_fields' and adds them on.",
 
-					"geometry": [
-						"census_tracts"
-					],
+				"ref_tables": [
+				],
 
-					"__3": "For reference tables, you provide a pair of keys (key_ref_tables/key_target) to match on. Then, for every matching unique value, the reference table looks up associated values for the columns you specify in 'add_fields' and adds them on.",
+				"__4": "For calculations, this uses the same format as those performed at load time. These specifically happen after all other merge, spatial join, and enrichment operations have been done, so you can operate on all the derived data fields as well.",
 
-					"ref_tables": [
-					],
-
-					"__4": "For calculations, this uses the same format as those performed at load time. These specifically happen after all other merge, spatial join, and enrichment operations have been done, so you can operate on all the derived data fields as well.",
-
-					"calc": {
-					}
+				"calc": {
 				}
 			},
 			"fill": {
@@ -395,6 +388,10 @@
 				{"by": "<loc_market_area>"},
 				{"by": "<loc_region>"}
 			]
+		},
+		"sales_scrutiny": {
+			"location": "neighborhood",
+			"deed_id": "deed_id"
 		}
 	},
 	"field_classification": {
