@@ -1,7 +1,6 @@
 {
 	"locality": {
 		"__comment": "Metadata about the locality/jurisdiction itself",
-		"__todo": ["Add back spatial_lag_sqft model (removed because it was throwing error)","Model groups should be more granular - would like to use zoning for this", "Using current status to identify vacant sales - would be better to determine if land was vacant when sale actually took place", "empty handling"],
 		"name": "Allegheny county",
 		"county": "Allegheny",
 		"state": "PA",
@@ -14,8 +13,8 @@
 	},
 	"data": {
 		"load": {
-			"__comment": "All tabular and shapefile data should be loaded here. You will reference these files elsewhere by the handles you define for them.",
 			"parcels": {
+				"__comment": "Read in the main parcel data file. This contains all of the parcel-level attributes from the Allegheny County real estate dataset.",
 				"filename": "parcels.csv",
 				"dupes": "$$ref.dupes",
 				"load": {
@@ -55,12 +54,12 @@
 					"roof_desc": ["ROOF", "string"],
 					"basement_desc": ["BASEMENT", "string"],
 					"quality_grade": ["GRADE", "string"],
-					"quality_grade_num": ["GRADENUM", "float"],
+					"bldg_quality_num": ["GRADENUM", "float"],
 					"condition": ["CONDITION", "string"],
-					"condition_num": ["CONDITIONNUM", "float"],
+					"bldg_condition_num": ["CONDITIONNUM", "float"],
 					"cdu_grade": ["CDU", "string"],
 					"total_rooms": ["TOTALROOMS", "float"],
-					"bedrooms": ["BEDROOMS", "float"],
+					"bldg_rooms_bed": ["BEDROOMS", "float"],
 					"full_baths": ["FULLBATHS", "float"],
 					"half_baths": ["HALFBATHS", "float"],
 					"heating_cooling": ["HEATINGCOOLING", "string"],
@@ -73,6 +72,7 @@
 				}
 			},
 			"sales": {
+				"__comment": "Read in the sales data file. This contains all of the sales from the Allegheny County real estate dataset.",
 				"filename": "sales.csv",
 				"load": {
 					"key": ["PARCEL_ID", "string"],
@@ -101,21 +101,21 @@
 							"DEEDBOOK","DEEDPAGE"
 						], "str:---"
 					],
+					"__comment": "valid_sale is an important field. It will be set to 'true' only for typical sales, and false for multi-parcel sales, love and affection sales, etc. For modeling purposes, we will only use valid sales, since other sales may or may not reflect market rates.",
 					"valid_sale": ["?", ["==", "SALECODE", "str:0 VALID SALE"]],
 					"vacant_sale": ["?", ["isin", "use", ["098 CONDEMNED/BOARDED-UP", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]]]
 				}
 			},
 			"geo_parcels": {
-				"_comment1": "You can (and should) provide shapefiles right alongside all the rest of your files",
-				"_comment2": "geo_parcels is always expected to exist, or an error will be raised",
+				"__comment": "Load in the shapefile, which contains geometric data for every parcel. We need this for all location-based analysis.",
 				"filename": "geo/parcels.parquet",
 				"dupes": "$$ref.dupes",
 				"load": {
-					"__comment": "For shapefiles, you don't have to specifically load the 'geometry' column, it's automatically included",
 					"key": "PARCEL_ID"
 				}
 			},
 			"census_tracts": {
+				"__comment": "Load in the census tracts. These will be matched to each parcel using geometric joins. Census tract can be used for location-related breakdowns and ratio studies.",
 				"filename": "geo/census_tracts.parquet",
 				"dupes": "auto",
 				"load": {
@@ -124,46 +124,48 @@
 			}
 		},
 		"process": {
-			"__": "These operations actually assemble your data. 'merge' will assemble your base dataframes from your individual data sources, and 'enrich' will derive data that can be calculated from the base fields.",
+			"__comment": "These operations actually assemble your data. 'merge' will assemble your base dataframes from your individual data sources, and 'enrich' will derive data that can be calculated from the base fields.",
 			"merge": {
-				"__": "You MUST define merge lists for 'universe' and 'sales'. Each takes a list, whose entries can be strings or objects. If they are strings, they are assumed to be the ID of a loaded dataframe, and it will assume default merge logic (how='left', on='key'). If you want to specify alternate logic, provide an object with 'id', 'how', and 'on' keys.",
+				"__comment": "universe contains intrinsic properties of each parcel. sales contains sales data.",
 
 				"universe": ["parcels"],
 				"sales": ["sales"]
 			},
 			"dupes": {
+				"__comment": "Handle duplicates - this basically just deletes any instances where there are rows for the same parcel.",
 				"universe": "$$ref.dupes",
 				"sales": "$$ref.dupes_key_sale"
 			},
 			"enrich": {
-				"__0": "For open street map, provide a list of keyed entries corresponding to classes of things you would like to download and enrich by. These will automatically calculate distance to these things.",
-
-				"openstreetmap": {
-					"enabled": false
-				},
-
-				"__1": "For distances, provide a list of strings and/or objects. Strings are interpreted as the IDs of loaded shapefiles. Objects must have an 'id' key, and optionally a 'field' key. If a 'field' key is provided, distances will be calculated for each row in the shapefile corresponding to a unique value for that field.",
-
-				"distances": [
-				],
-
-				"__2": "For geometry, provide a list of strings and/or objects, these represent spatial joins. Strings are interpreted as the IDs of loaded shapefiles. Objects must have these keys: 'id', and 'predicate', where 'predicate' is the name of the spatial join function to use.",
-
+				"__comment1": "Join the census tract onto the universe.",
 				"geometry": [
 					"census_tracts"
 				],
 
-				"__3": "For reference tables, you provide a pair of keys (key_ref_tables/key_target) to match on. Then, for every matching unique value, the reference table looks up associated values for the columns you specify in 'add_fields' and adds them on.",
-
-				"ref_tables": [
-				],
-
-				"__4": "For calculations, this uses the same format as those performed at load time. These specifically happen after all other merge, spatial join, and enrichment operations have been done, so you can operate on all the derived data fields as well.",
-
-				"calc": {
+				"__comment2": "spatial_lag computes weighted average of nearby (with a half mile) parcels. This is computed for a few different fields, including sale prices, building quality, building condition, and building age.",
+				"spatial_lag": {
+					"model_groups": {
+						"__comment": "The spatial_lag fields for residential will be based off the values of nearby residential parcels, and the fields for commercial will be based off nearby commercial parcels. This can be changed - if we want to, we can include residential parcels in the commercial spatial lag computations.",
+						"residential": {
+							"sample_from": [
+								"residential"
+							]
+						},
+						"commercial": {
+							"sample_from": [
+								"commercial"
+							]
+						},
+						"industrial_agricultural_other": {
+							"sample_from": [
+								"industrial_agricultural_other"
+							]
+						}
+					}
 				}
 			},
 			"fill": {
+				"__comment": "This fills any blanks in the dataset with defaults. Different fields can use different defaults, and we can also split up the behavior for vacant vs. improved parcels.",
 				"false": [
 					"valid_sale"
 				],
@@ -203,19 +205,20 @@
 					"heating_cooling"
 				],
 				"median": [
-					"quality_grade_num",
-					"condition_num"
+					"bldg_quality_num",
+					"bldg_condition_num"
 				],
 				"zero_impr": [
 					"land_area_sqft",
 					"stories",
 					"bldg_year_built",
 					"total_rooms",
-					"bedrooms",
+					"bldg_rooms_bed",
 					"full_baths",
 					"half_baths",
 					"fireplaces",
 					"basement_garage",
+					"bldg_area_finished_sqft",
 					"finished_living_area_sqft"
 				],
 				"mode_impr": [
@@ -225,11 +228,12 @@
 					"stories",
 					"bldg_year_built",
 					"total_rooms",
-					"bedrooms",
+					"bldg_rooms_bed",
 					"full_baths",
 					"half_baths",
 					"fireplaces",
 					"basement_garage",
+					"bldg_area_finished_sqft",
 					"finished_living_area_sqft"
 				],
 				"none_vacant": [
@@ -242,30 +246,40 @@
 					"cdu_grade",
 					"heating_cooling"
 				]
-			},
-			"reconcile": {
-				"__comment": "Different dataframes sometimes have the same keys, and you might need both to create a complete record. However, if you naively merge the two sets together you'll just get extra columns. Also, you might want to specify a priority order to resolve conflicts."
 			}
 		}
 	},
 	"modeling": {
 		"try_variables": {
+			"__comment": "try_variables is just used for exploratory analysis. The pipeline will compute R^2 and other statistics for each variable, and tell you which ones are best.",
 			"variables": [
 				"land_area_sqft",
 				"stories",
 				"bldg_year_built",
 				"total_rooms",
-				"bedrooms",
+				"bldg_rooms_bed",
 				"full_baths",
 				"half_baths",
 				"fireplaces",
 				"basement_garage",
-				"finished_living_area_sqft",
-				"quality_grade_num",
-				"condition_num"
+				"bldg_area_finished_sqft",
+				"bldg_quality_num",
+				"bldg_condition_num",
+				"spatial_lag_bedroom_density",
+				"spatial_lag_bldg_age_years",
+				"spatial_lag_bldg_area_finished_sqft",
+				"spatial_lag_land_area_sqft",
+				"spatial_lag_bldg_quality_num",
+				"spatial_lag_bldg_condition_num",
+				"spatial_lag_floor_area_ratio",
+				"spatial_lag_sale_price_time_adj",
+				"spatial_lag_sale_price_time_adj_vacant",
+				"spatial_lag_sale_price_time_adj_land_sqft",
+				"spatial_lag_sale_price_time_adj_impr_sqft"
 			]
 		},
 		"metadata": {
+			"__comment": "The model is build using sales going back to 2020, but only sales since 2024 are used for testing the model and running ratio studies.",
 			"valuation_date": "2025-01-01",
 			"use_sales_from": 2020,
 			"test_sales_from": 2024,
@@ -273,24 +287,26 @@
 			"modeler_nick": "<MODELER NICKNAME HERE>"
 		},
 		"instructions": {
+			"__comment": "This is where the models actually get run to generate predictions. We run a few different models and combine them to get the final assessments.",
+			"__comment2": "'assessor' just takes the existing assessments. 'mra' is a standard regression. 'local_sqft' and 'spatial_lag_sqft' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are fancy machine learning decision tree models.",
 			"main": {
-				"run": ["assessor", "mra", "local_sqft", "lightgbm", "xgboost", "catboost"],
+				"run": ["assessor", "mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
 				"stacked_ensemble": {
 					"enabled": true,
 					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_sqft", "lightgbm", "xgboost", "catboost"],
+					"models_to_include": ["mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
 					"contextual_features": [],
 					"categorical_contextual_features": [],
 					"validation_fraction": 0.2
 				}
 			},
 			"vacant": {
-				"__run": ["assessor", "gwr", "mra", "lightgbm", "catboost", "xgboost", "local_sqft"],
-				"run": ["assessor", "mra", "local_sqft", "lightgbm", "catboost", "xgboost", "gwr"],
+				"__run": ["assessor", "gwr", "mra", "lightgbm", "catboost", "xgboost", "local_sqft", "spatial_lag_sqft"],
+				"run": ["assessor", "mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "catboost", "xgboost", "gwr"],
 				"stacked_ensemble": {
 					"enabled": true,
 					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_sqft", "lightgbm", "catboost", "xgboost"],
+					"models_to_include": ["mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "catboost", "xgboost"],
 					"contextual_features": [],
 					"categorical_contextual_features": [],
 					"validation_fraction": 0.2
@@ -301,7 +317,7 @@
 			},
 			"allocation": {
 				"hedonic": ["assessor",  "stacked_ensemble"],
-				"vacant": ["local_sqft"],
+				"vacant": ["local_sqft", "spatial_lag_sqft"],
 				"plot": {
 
 				}
@@ -313,6 +329,7 @@
 			]
 		},
 		"models": {
+			"__comment": "This is where we choose which variables to include when running the models. Note that most of the models evaluate each variable and will exclude any that aren't useful - so it's ok to include a lot of variables here, the models will select the useful ones automatically.",
 			"main": {
 				"default": {
 					"ind_vars": [
@@ -320,48 +337,49 @@
 						"stories",
 						"bldg_year_built",
 						"total_rooms",
-						"bedrooms",
+						"bldg_rooms_bed",
 						"full_baths",
 						"half_baths",
 						"fireplaces",
 						"basement_garage",
-						"finished_living_area_sqft",
-						"quality_grade_num",
-						"condition_num"
-					]
-				},
-				"gwr": {
-					"ind_vars": [
-						"land_area_sqft",
-						"stories",
-						"bldg_year_built",
-						"total_rooms",
-						"bedrooms",
-						"full_baths",
-						"half_baths",
-						"fireplaces",
-						"basement_garage",
-						"finished_living_area_sqft",
-						"quality_grade_num",
-						"condition_num"
+						"bldg_area_finished_sqft",
+						"bldg_quality_num",
+						"bldg_condition_num",
+						"spatial_lag_bedroom_density",
+						"spatial_lag_bldg_age_years",
+						"spatial_lag_bldg_area_finished_sqft",
+						"spatial_lag_land_area_sqft",
+						"spatial_lag_bldg_quality_num",
+						"spatial_lag_bldg_condition_num",
+						"spatial_lag_floor_area_ratio",
+						"spatial_lag_sale_price_time_adj",
+						"spatial_lag_sale_price_time_adj_vacant",
+						"spatial_lag_sale_price_time_adj_land_sqft",
+						"spatial_lag_sale_price_time_adj_impr_sqft"
 					]
 				}
 			},
 			"vacant": {
 				"default": {
 					"ind_vars": [
-						"land_area_sqft"
-					]
-				},
-				"gwr": {
-					"ind_vars": [
-						"land_area_sqft"
+						"land_area_sqft",
+						"spatial_lag_bedroom_density",
+						"spatial_lag_bldg_age_years",
+						"spatial_lag_bldg_area_finished_sqft",
+						"spatial_lag_land_area_sqft",
+						"spatial_lag_bldg_quality_num",
+						"spatial_lag_bldg_condition_num",
+						"spatial_lag_floor_area_ratio",
+						"spatial_lag_sale_price_time_adj",
+						"spatial_lag_sale_price_time_adj_vacant",
+						"spatial_lag_sale_price_time_adj_land_sqft",
+						"spatial_lag_sale_price_time_adj_impr_sqft"
 					]
 				}
 			}
 		},
 		"model_groups": {
-			"__comment": "",
+			"__comment": "Defining the model groups. Each group will be modelled separately.",
 			"commercial": {
 				"name": "Commercial",
 				"filter": ["or", "$$ref.filters.commercial"]
@@ -377,11 +395,12 @@
 		}
 	},
 	"analysis": {
+		"__comment": "Ratio studies will break down the sales by value and size bucket, as well as by location/municipality. This can be used to spot specific sets of parcels for which we have bad predictions.",
 		"ratio_study": {
 			"look_back_years": 1,
 			"breakdowns": [
 				{"by": "sale_price", "quantiles": 10},
-				{"by": "finished_living_area_sqft", "quantiles": 10},
+				{"by": "bldg_area_finished_sqft", "quantiles": 10},
 				{"by": "bldg_year_built", "slice_size": 10},
 				{"by": "land_area_sqft", "quantiles":  10},
 				{"by": "<loc_neighborhood>"},
@@ -429,7 +448,7 @@
 				"fair_market_building_assessed",
 				"stories",
 				"bldg_year_built",
-				"bedrooms",
+				"bldg_rooms_bed",
 				"full_baths",
 				"half_baths"
 			],
@@ -447,13 +466,9 @@
 			]
 		}
 	},
-	"data_dictionary": {
-
-	},
 	"ref": {
-		"calc": {
-		},
 		"filters": {
+			"__comment": "These are the definitions for our model groups",
 			"residential":  ["or",
 				["isin", "class", ["R RESIDENTIAL"]]
 			],
@@ -463,6 +478,11 @@
 			"industrial_agricultural_other":  ["or",
 				["isin", "class", ["I INDUSTRIAL", "F AGRICULTURAL", "G GOVERNMENT", "U UTILITIES", "O OTHER"]]
 			]
+		},
+		"dupes": {
+			"subset": ["key"],
+			"sort_by": ["key", "asc"],
+			"drop": true
 		},
 		"dupes_key_sale": {
 			"subset": ["key_sale"],
