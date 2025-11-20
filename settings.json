@@ -37,16 +37,16 @@
 					"farmstead_flag": ["FARMSTEADFLAG", "string"],
 					"clean_green": ["CLEANGREEN", "string"],
 					"abatement_flag": ["ABATEMENTFLAG", "string"],
-					"assr_impr_value": ["COUNTYBUILDING", "float"],
-					"assr_land_value": ["COUNTYLAND", "float"],
-					"assr_market_value": ["COUNTYTOTAL", "float"],
+					"county_impr_value": ["COUNTYBUILDING", "float"],
+					"county_land_value": ["COUNTYLAND", "float"],
+					"county_market_value": ["COUNTYTOTAL", "float"],
 					"county_building_exempt_assessed": ["COUNTYEXEMPTBLDG", "float"],
 					"local_building_assessed": ["LOCALBUILDING", "float"],
 					"local_land_assessed": ["LOCALLAND", "float"],
 					"local_total_assessed": ["LOCALTOTAL", "float"],
-					"fair_market_building_assessed": ["FAIRMARKETBUILDING", "float"],
-					"fair_market_land_assessed": ["FAIRMARKETLAND", "float"],
-					"fair_market_total_assessed": ["FAIRMARKETTOTAL", "float"],
+					"assr_impr_value": ["FAIRMARKETBUILDING", "float"],
+					"assr_land_value": ["FAIRMARKETLAND", "float"],
+					"assr_market_value": ["FAIRMARKETTOTAL", "float"],
 					"style": ["STYLE", "string"],
 					"stories": ["STORIES", "float"],
 					"bldg_year_built": ["YEARBLT", "float"],
@@ -103,7 +103,7 @@
 					],
 					"__comment": "valid_sale is an important field. It will be set to 'true' only for typical sales, and false for multi-parcel sales, love and affection sales, etc. For modeling purposes, we will only use valid sales, since other sales may or may not reflect market rates.",
 					"valid_sale": ["?", ["==", "SALECODE", "str:0 VALID SALE"]],
-					"vacant_sale": ["?", ["isin", "use", ["098 CONDEMNED/BOARDED-UP", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]]]
+					"vacant_sale": ["?", ["isin", "use", ["098 CONDEMNED/BOARDED-UP", "099 RES AUX BUILDING (NO HOUSE)", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]]]
 				}
 			},
 			"geo_parcels": {
@@ -260,7 +260,6 @@
 				"bldg_rooms_bed",
 				"full_baths",
 				"half_baths",
-				"fireplaces",
 				"basement_garage",
 				"bldg_area_finished_sqft",
 				"bldg_quality_num",
@@ -273,8 +272,6 @@
 				"spatial_lag_bldg_condition_num",
 				"spatial_lag_floor_area_ratio",
 				"spatial_lag_sale_price_time_adj",
-				"spatial_lag_sale_price_time_adj_vacant",
-				"spatial_lag_sale_price_time_adj_land_sqft",
 				"spatial_lag_sale_price_time_adj_impr_sqft"
 			]
 		},
@@ -290,6 +287,17 @@
 			"__comment": "This is where the models actually get run to generate predictions. We run a few different models and combine them to get the final assessments.",
 			"__comment2": "'assessor' just takes the existing assessments. 'mra' is a standard regression. 'local_sqft' and 'spatial_lag_sqft' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are fancy machine learning decision tree models.",
 			"main": {
+				"run": ["assessor", "mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
+				"stacked_ensemble": {
+					"enabled": true,
+					"meta_model": "ridge",
+					"models_to_include": ["mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
+					"contextual_features": [],
+					"categorical_contextual_features": [],
+					"validation_fraction": 0.2
+				}
+			},
+			"hedonic": {
 				"run": ["assessor", "mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
 				"stacked_ensemble": {
 					"enabled": true,
@@ -316,7 +324,7 @@
 				"period": "Q"
 			},
 			"allocation": {
-				"hedonic": ["assessor",  "stacked_ensemble"],
+				"hedonic": ["assessor", "mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
 				"vacant": ["local_sqft", "spatial_lag_sqft"],
 				"plot": {
 
@@ -340,7 +348,6 @@
 						"bldg_rooms_bed",
 						"full_baths",
 						"half_baths",
-						"fireplaces",
 						"basement_garage",
 						"bldg_area_finished_sqft",
 						"bldg_quality_num",
@@ -353,8 +360,32 @@
 						"spatial_lag_bldg_condition_num",
 						"spatial_lag_floor_area_ratio",
 						"spatial_lag_sale_price_time_adj",
-						"spatial_lag_sale_price_time_adj_vacant",
-						"spatial_lag_sale_price_time_adj_land_sqft",
+						"spatial_lag_sale_price_time_adj_impr_sqft"
+					]
+				}
+			},
+			"hedonic": {
+				"default": {
+					"ind_vars": [
+						"land_area_sqft",
+						"stories",
+						"bldg_year_built",
+						"total_rooms",
+						"bldg_rooms_bed",
+						"full_baths",
+						"half_baths",
+						"basement_garage",
+						"bldg_area_finished_sqft",
+						"bldg_quality_num",
+						"bldg_condition_num",
+						"spatial_lag_bedroom_density",
+						"spatial_lag_bldg_age_years",
+						"spatial_lag_bldg_area_finished_sqft",
+						"spatial_lag_land_area_sqft",
+						"spatial_lag_bldg_quality_num",
+						"spatial_lag_bldg_condition_num",
+						"spatial_lag_floor_area_ratio",
+						"spatial_lag_sale_price_time_adj",
 						"spatial_lag_sale_price_time_adj_impr_sqft"
 					]
 				}
@@ -371,8 +402,6 @@
 						"spatial_lag_bldg_condition_num",
 						"spatial_lag_floor_area_ratio",
 						"spatial_lag_sale_price_time_adj",
-						"spatial_lag_sale_price_time_adj_vacant",
-						"spatial_lag_sale_price_time_adj_land_sqft",
 						"spatial_lag_sale_price_time_adj_impr_sqft"
 					]
 				}
@@ -443,9 +472,9 @@
 		},
 		"impr": {
 			"numeric": [
-				"assr_impr_value",
+				"county_impr_value",
 				"local_building_assessed",
-				"fair_market_building_assessed",
+				"assr_impr_value",
 				"stories",
 				"bldg_year_built",
 				"bldg_rooms_bed",
