@@ -261,12 +261,11 @@
 				"full_baths",
 				"half_baths",
 				"basement_garage",
-				"bldg_area_finished_sqft",
+				"finished_living_area_sqft",
 				"bldg_quality_num",
 				"bldg_condition_num",
 				"spatial_lag_bedroom_density",
 				"spatial_lag_bldg_age_years",
-				"spatial_lag_bldg_area_finished_sqft",
 				"spatial_lag_land_area_sqft",
 				"spatial_lag_bldg_quality_num",
 				"spatial_lag_bldg_condition_num",
@@ -285,36 +284,36 @@
 		},
 		"instructions": {
 			"__comment": "This is where the models actually get run to generate predictions. We run a few different models and combine them to get the final assessments.",
-			"__comment2": "'assessor' just takes the existing assessments. 'mra' is a standard regression. 'local_sqft' and 'spatial_lag_sqft' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are fancy machine learning decision tree models.",
+			"__comment2": "'assessor' just takes the existing assessments. 'mra' is a standard regression. 'local_area' and 'spatial_lag_area' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are fancy machine learning decision tree models.",
 			"main": {
-				"run": ["assessor", "mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
+				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
 				"stacked_ensemble": {
 					"enabled": true,
 					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
+					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
 					"contextual_features": [],
 					"categorical_contextual_features": [],
 					"validation_fraction": 0.2
 				}
 			},
 			"hedonic": {
-				"run": ["assessor", "mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
+				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
 				"stacked_ensemble": {
 					"enabled": true,
 					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
+					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
 					"contextual_features": [],
 					"categorical_contextual_features": [],
 					"validation_fraction": 0.2
 				}
 			},
 			"vacant": {
-				"__run": ["assessor", "gwr", "mra", "lightgbm", "catboost", "xgboost", "local_sqft", "spatial_lag_sqft"],
-				"run": ["assessor", "mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "catboost", "xgboost", "gwr"],
+				"__run": ["assessor", "gwr", "mra", "lightgbm", "catboost", "xgboost", "local_area", "spatial_lag_area"],
+				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "catboost", "xgboost", "gwr"],
 				"stacked_ensemble": {
 					"enabled": true,
 					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "catboost", "xgboost"],
+					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "catboost", "xgboost"],
 					"contextual_features": [],
 					"categorical_contextual_features": [],
 					"validation_fraction": 0.2
@@ -324,8 +323,8 @@
 				"period": "Q"
 			},
 			"allocation": {
-				"hedonic": ["assessor", "mra", "local_sqft", "spatial_lag_sqft", "lightgbm", "xgboost", "catboost"],
-				"vacant": ["local_sqft", "spatial_lag_sqft"],
+				"hedonic": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
+				"vacant": ["local_area", "spatial_lag_area"],
 				"plot": {
 
 				}
@@ -342,24 +341,15 @@
 				"default": {
 					"ind_vars": [
 						"land_area_sqft",
-						"stories",
 						"bldg_year_built",
-						"total_rooms",
-						"bldg_rooms_bed",
-						"full_baths",
-						"half_baths",
-						"basement_garage",
-						"bldg_area_finished_sqft",
+						"finished_living_area_sqft",
 						"bldg_quality_num",
 						"bldg_condition_num",
 						"spatial_lag_bedroom_density",
 						"spatial_lag_bldg_age_years",
-						"spatial_lag_bldg_area_finished_sqft",
-						"spatial_lag_land_area_sqft",
 						"spatial_lag_bldg_quality_num",
 						"spatial_lag_bldg_condition_num",
 						"spatial_lag_floor_area_ratio",
-						"spatial_lag_sale_price_time_adj",
 						"spatial_lag_sale_price_time_adj_impr_sqft"
 					]
 				}
@@ -368,24 +358,15 @@
 				"default": {
 					"ind_vars": [
 						"land_area_sqft",
-						"stories",
 						"bldg_year_built",
-						"total_rooms",
-						"bldg_rooms_bed",
-						"full_baths",
-						"half_baths",
-						"basement_garage",
-						"bldg_area_finished_sqft",
+						"finished_living_area_sqft",
 						"bldg_quality_num",
 						"bldg_condition_num",
 						"spatial_lag_bedroom_density",
 						"spatial_lag_bldg_age_years",
-						"spatial_lag_bldg_area_finished_sqft",
-						"spatial_lag_land_area_sqft",
 						"spatial_lag_bldg_quality_num",
 						"spatial_lag_bldg_condition_num",
 						"spatial_lag_floor_area_ratio",
-						"spatial_lag_sale_price_time_adj",
 						"spatial_lag_sale_price_time_adj_impr_sqft"
 					]
 				}
@@ -396,12 +377,9 @@
 						"land_area_sqft",
 						"spatial_lag_bedroom_density",
 						"spatial_lag_bldg_age_years",
-						"spatial_lag_bldg_area_finished_sqft",
-						"spatial_lag_land_area_sqft",
 						"spatial_lag_bldg_quality_num",
 						"spatial_lag_bldg_condition_num",
 						"spatial_lag_floor_area_ratio",
-						"spatial_lag_sale_price_time_adj",
 						"spatial_lag_sale_price_time_adj_impr_sqft"
 					]
 				}
@@ -429,7 +407,7 @@
 			"look_back_years": 1,
 			"breakdowns": [
 				{"by": "sale_price", "quantiles": 10},
-				{"by": "bldg_area_finished_sqft", "quantiles": 10},
+				{"by": "finished_living_area_sqft", "quantiles": 10},
 				{"by": "bldg_year_built", "slice_size": 10},
 				{"by": "land_area_sqft", "quantiles":  10},
 				{"by": "<loc_neighborhood>"},
