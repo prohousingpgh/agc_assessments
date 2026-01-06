@@ -68,7 +68,8 @@
 					"finished_living_area_sqft": ["FINISHEDLIVINGAREA", "float"],
 					"card_number": ["CARDNUMBER", "string"],
 					"alt_id": ["ALT_ID", "string"],
-					"bldg_area_finished_sqft": ["FINISHEDAREA", "float"]
+					"bldg_area_finished_sqft": ["FINISHEDAREA", "float"],
+					"commercial_rent": ["COMMERCIALRENT", "float"]
 				}
 			},
 			"sales": {
@@ -87,7 +88,9 @@
 					"change_address_2": ["CHANGENOTICEADDRESS2", "string"],
 					"change_address_3": ["CHANGENOTICEADDRESS3", "string"],
 					"change_address_4": ["CHANGENOTICEADDRESS4", "string"],
-					"use": ["USE", "string"]
+					"use": ["USE", "string"],
+					"class": ["CLASS", "string"],
+					"bldg_area_finished_sqft": ["FINISHEDAREA", "float"]
 				},
 				"calc": {
 					"key_sale": ["join",
@@ -117,9 +120,17 @@
 			"census_tracts": {
 				"__comment": "Load in the census tracts. These will be matched to each parcel using geometric joins. Census tract can be used for location-related breakdowns and ratio studies.",
 				"filename": "geo/census_tracts.parquet",
-				"dupes": "auto",
+				"dupes": "allow",
 				"load": {
 					"census_tract": "CENSUS_TRACT"
+				}
+			},
+			"market_value": {
+				"__comment": "Load in market value data from https://data.wprdc.org/dataset/market-value-analysis-2021",
+				"filename": "geo/market_value.parquet",
+				"dupes": "allow",
+				"load": {
+					"market_value_category": ["MARKET_VALUE", "string"]
 				}
 			}
 		},
@@ -137,9 +148,10 @@
 				"sales": "$$ref.dupes_key_sale"
 			},
 			"enrich": {
-				"__comment1": "Join the census tract onto the universe.",
+				"__comment1": "Join the census tract and market value category onto the universe.",
 				"geometry": [
-					"census_tracts"
+					"census_tracts",
+					"market_value"
 				],
 
 				"__comment2": "spatial_lag computes weighted average of nearby (with a half mile) parcels. This is computed for a few different fields, including sale prices, building quality, building condition, and building age.",
@@ -154,11 +166,6 @@
 						"commercial": {
 							"sample_from": [
 								"commercial"
-							]
-						},
-						"industrial_agricultural_other": {
-							"sample_from": [
-								"industrial_agricultural_other"
 							]
 						}
 					}
@@ -178,7 +185,8 @@
 					"homestead_flag",
 					"farmstead_flag",
 					"clean_green",
-					"abatement_flag"
+					"abatement_flag",
+					"market_value_category"
 				],
 				"unknown": [
 					"city",
@@ -219,7 +227,8 @@
 					"fireplaces",
 					"basement_garage",
 					"bldg_area_finished_sqft",
-					"finished_living_area_sqft"
+					"finished_living_area_sqft",
+					"commercial_rent"
 				],
 				"mode_impr": [
 				],
@@ -234,7 +243,8 @@
 					"fireplaces",
 					"basement_garage",
 					"bldg_area_finished_sqft",
-					"finished_living_area_sqft"
+					"finished_living_area_sqft",
+					"commercial_rent"
 				],
 				"none_vacant": [
 					"style",
@@ -264,6 +274,8 @@
 				"finished_living_area_sqft",
 				"bldg_quality_num",
 				"bldg_condition_num",
+				"commercial_rent",
+				"market_value_category",
 				"spatial_lag_bedroom_density",
 				"spatial_lag_bldg_age_years",
 				"spatial_lag_land_area_sqft",
@@ -331,9 +343,13 @@
 			},
 			"model_group_order": [
 				"commercial",
-				"residential",
-				"industrial_agricultural_other"
-			]
+				"residential"
+			],
+			"feature_selection": {
+				"thresholds": {
+					"correlation": 0.07
+				}
+			}
 		},
 		"models": {
 			"__comment": "This is where we choose which variables to include when running the models. Note that most of the models evaluate each variable and will exclude any that aren't useful - so it's ok to include a lot of variables here, the models will select the useful ones automatically.",
@@ -341,10 +357,18 @@
 				"default": {
 					"ind_vars": [
 						"land_area_sqft",
+						"stories",
 						"bldg_year_built",
+						"total_rooms",
+						"bldg_rooms_bed",
+						"full_baths",
+						"half_baths",
+						"basement_garage",
 						"finished_living_area_sqft",
 						"bldg_quality_num",
 						"bldg_condition_num",
+						"commercial_rent",
+						"market_value_category",
 						"spatial_lag_bedroom_density",
 						"spatial_lag_bldg_age_years",
 						"spatial_lag_bldg_quality_num",
@@ -358,10 +382,18 @@
 				"default": {
 					"ind_vars": [
 						"land_area_sqft",
+						"stories",
 						"bldg_year_built",
+						"total_rooms",
+						"bldg_rooms_bed",
+						"full_baths",
+						"half_baths",
+						"basement_garage",
 						"finished_living_area_sqft",
 						"bldg_quality_num",
 						"bldg_condition_num",
+						"commercial_rent",
+						"market_value_category",
 						"spatial_lag_bedroom_density",
 						"spatial_lag_bldg_age_years",
 						"spatial_lag_bldg_quality_num",
@@ -375,6 +407,8 @@
 				"default": {
 					"ind_vars": [
 						"land_area_sqft",
+						"commercial_rent",
+						"market_value_category",
 						"spatial_lag_bedroom_density",
 						"spatial_lag_bldg_age_years",
 						"spatial_lag_bldg_quality_num",
@@ -394,10 +428,6 @@
 			"residential": {
 				"name": "Residential",
 				"filter": ["or", "$$ref.filters.residential"]
-			},
-			"industrial_agricultural_other": {
-				"name": "Industrial/Agricultural/Miscellaneous",
-				"filter": ["or", "$$ref.filters.industrial_agricultural_other"]
 			}
 		}
 	},
@@ -446,6 +476,7 @@
 			"numeric": [
 			],
 			"categorical": [
+				"market_value_category"
 			]
 		},
 		"impr": {
@@ -464,12 +495,14 @@
 				"quality_grade",
 				"condition",
 				"cdu_grade",
-				"heating_cooling"
+				"heating_cooling",
+				"market_value_category"
 			]
 		},
 		"other": {
 			"categorical": [
-				"owner"
+				"owner",
+				"market_value_category"
 			]
 		}
 	},
@@ -480,10 +513,7 @@
 				["isin", "class", ["R RESIDENTIAL"]]
 			],
 			"commercial":  ["or",
-				["isin", "class", ["C COMMERCIAL"]]
-			],
-			"industrial_agricultural_other":  ["or",
-				["isin", "class", ["I INDUSTRIAL", "F AGRICULTURAL", "G GOVERNMENT", "U UTILITIES", "O OTHER"]]
+				["isin", "class", ["C COMMERCIAL", "I INDUSTRIAL", "F AGRICULTURAL", "G GOVERNMENT", "U UTILITIES", "O OTHER"]]
 			]
 		},
 		"dupes": {

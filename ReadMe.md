@@ -2,21 +2,26 @@ Instructions for downloading and installing OpenAvmKit are available at https://
 
 # Downloading input files
 
-We need 3 data input files to use OpenAvmKit:<br>
+We need 4 data input files to use OpenAvmKit:<br>
 Get the property assessment csv from here: https://data.wprdc.org/dataset/property-assessments<br>
 Get the parcel GeoJSON from here: https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214<br>
 Get the census tract GeoJSON from here: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-census-tracts-2020
+Get market value categories from here: https://data.wprdc.org/dataset/market-value-analysis-2021
+
+Run this script, which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
+python getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson
 
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
-python OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202505.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson
+python OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202505.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson
 
-This should generate 4 files:<br>
+This should generate 5 files:<br>
 parcels.csv<br>
 sales.csv<br>
 parcels.parquet<br>
-census_tracts.parquet
+census_tracts.parquet<br>
+market_value.parquet
 
-Additionally, I've provided a settings.json file which OpenAvmKit uses to read and analyze the data. It's pretty barebones but it's a start.
+Additionally, I've provided the settings.json file which OpenAvmKit uses to read and analyze the data.
 
 # OpenAvmKit settings
 
@@ -62,6 +67,7 @@ notebooks/<br>
 &emsp;&emsp;&emsp;├── in/<br>
 &emsp;&emsp;&emsp;&emsp; ├── geo/<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── census_tracts.parquet<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;  ├── market_value.parquet<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── parcels.parquet<br>
 &emsp;&emsp;&emsp;&emsp; ├── parcels.csv<br>
 &emsp;&emsp;&emsp;&emsp; ├── sales.csv<br>

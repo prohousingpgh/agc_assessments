@@ -40,13 +40,34 @@ condition_to_num_map = {
 parcel_data = pd.read_csv(sys.argv[1], dtype={'PARID': str, 'PROPERTYHOUSENUM': str, 'PROPERTYFRACTION': str, 'PROPERTYADDRESS': str, 'PROPERTYCITY': str, 'PROPERTYSTATE': str, 'PROPERTYUNIT': str, 'PROPERTYZIP': str, 'MUNICODE': str, 'MUNIDESC': str, 'SCHOOLCODE': str, 'SCHOOLDESC': str, 'LEGAL1': str, 'LEGAL2': str, 'LEGAL3': str, 'NEIGHCODE': str, 'NEIGHDESC': str, 'TAXCODE': str, 'TAXDESC': str, 'TAXSUBCODE': str, 'TAXSUBCODE_DESC': str, 'OWNERCODE': str, 'OWNERDESC': str, 'CLASS': str, 'CLASSDESC': str, 'USECODE': str, 'USEDESC': str, 'LOTAREA': str, 'HOMESTEADFLAG': str, 'FARMSTEADFLAG': str, 'CLEANGREEN': str, 'ABATEMENTFLAG': str, 'RECORDDATE': str, 'SALEDATE': str, 'SALEPRICE': str, 'SALECODE': str, 'SALEDESC': str, 'DEEDBOOK': str, 'DEEDPAGE': str, 'PREVSALEDATE': str, 'PREVSALEPRICE': str, 'PREVSALEDATE2': str, 'PREVSALEPRICE2': str, 'CHANGENOTICEADDRESS1': str, 'CHANGENOTICEADDRESS2': str, 'CHANGENOTICEADDRESS3': str, 'CHANGENOTICEADDRESS4': str, 'COUNTYBUILDING': str, 'COUNTYLAND': str, 'COUNTYTOTAL': str, 'COUNTYEXEMPTBLDG': str, 'LOCALBUILDING': str, 'LOCALLAND': str, 'LOCALTOTAL': str, 'FAIRMARKETBUILDING': str, 'FAIRMARKETLAND': str, 'FAIRMARKETTOTAL': str, 'STYLE': str, 'STYLEDESC': str, 'STORIES': str, 'YEARBLT': str, 'EXTERIORFINISH': str, 'EXTFINISH_DESC': str, 'ROOF': str, 'ROOFDESC': str, 'BASEMENT': str, 'BASEMENTDESC': str, 'GRADE': str, 'GRADEDESC': str, 'CONDITION': str, 'CONDITIONDESC': str, 'CDU': str, 'CDUDESC': str, 'TOTALROOMS': str, 'BEDROOMS': str, 'FULLBATHS': str, 'HALFBATHS': str, 'HEATINGCOOLING': str, 'HEATINGCOOLINGDESC': str, 'FIREPLACES': str, 'BSMTGARAGE': str, 'FINISHEDLIVINGAREA': str, 'CARDNUMBER': str, 'ALT_ID': str, 'TAXYEAR': str, 'ASOFDATE': str})
 parcel_geometry = gpd.read_file(sys.argv[2])
 census_tracts = gpd.read_file(sys.argv[3])
+commercial_rents = pd.read_csv(sys.argv[4], dtype={'PARCEL_ID': str, 'PRICE': float, 'IS_VACANT': bool})
+commercial_rents = commercial_rents[commercial_rents['IS_VACANT'] == False]
+commercial_rents = commercial_rents[commercial_rents['PRICE'] > 0]
+market_value = gpd.read_file(sys.argv[5])
 
-sales_data_1 = parcel_data[['PARID','RECORDDATE','SALEDATE','SALEPRICE','SALECODE','SALEDESC','DEEDBOOK','DEEDPAGE','CHANGENOTICEADDRESS1','CHANGENOTICEADDRESS2','CHANGENOTICEADDRESS3','CHANGENOTICEADDRESS4','USECODE','USEDESC']].copy()
+parcel_data.rename(columns={'PARID': 'PARCEL_ID'}, inplace=True)
+parcel_geometry.rename(columns={'PIN': 'PARCEL_ID'}, inplace=True)
+census_tracts.rename(columns={'NAME': 'CENSUS_TRACT'}, inplace=True)
+market_value.rename(columns={'MVA21': 'MARKET_VALUE'}, inplace=True)
+parcel_data['UNIQUE_ID'] = parcel_data['PARCEL_ID']
+commercial_rents['UNIQUE_ID'] = commercial_rents['PARCEL_ID']
+parcel_geometry['UNIQUE_ID'] = parcel_geometry['PARCEL_ID']
+parcel_data.set_index('UNIQUE_ID', inplace=True)
+commercial_rents.set_index(['UNIQUE_ID', 'LISTING_ID'], inplace=True)
+parcel_geometry.set_index('UNIQUE_ID', inplace=True)
+
+commercial_rents_gdf = gpd.GeoDataFrame(
+    commercial_rents, geometry=gpd.points_from_xy(commercial_rents['LONGITUDE'], commercial_rents['LATITUDE']), crs="EPSG:4326"
+)
+
+sales_data_1 = parcel_data[['PARCEL_ID','RECORDDATE','SALEDATE','SALEPRICE','SALECODE','SALEDESC','DEEDBOOK','DEEDPAGE','CHANGENOTICEADDRESS1','CHANGENOTICEADDRESS2','CHANGENOTICEADDRESS3','CHANGENOTICEADDRESS4','USECODE','USEDESC','CLASS','CLASSDESC']].copy()
 sales_data = sales_data_1[~sales_data_1['SALEDATE'].isnull()].copy()
 sales_data['SALECODE'] = sales_data['SALECODE'] + ' ' + sales_data['SALEDESC']
 sales_data['USE'] = sales_data['USECODE'] + ' ' + sales_data['USEDESC']
 sales_data['SALEYEAR'] = sales_data['SALEDATE'].str.slice(6, 10)
-sales_data.rename(columns={'PARID': 'PARCEL_ID'}, inplace=True)
+sales_data['CLASS'] = sales_data['CLASS'] + ' ' + sales_data['CLASSDESC']
+vacant_codes = ["098 CONDEMNED/BOARDED-UP", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]
+sales_data['FINISHEDAREA'] = np.where(sales_data['USE'].isin(vacant_codes), 0, 1)
 
 parcel_data['ADDRESS'] = parcel_data['PROPERTYHOUSENUM'] + ' ' + parcel_data['PROPERTYFRACTION'] + ' ' + parcel_data['PROPERTYADDRESS'] + ' ' + parcel_data['PROPERTYUNIT']
 parcel_data['MUNICIPALITY'] = parcel_data['MUNICODE'] + ' ' + parcel_data['MUNIDESC']
@@ -68,20 +89,40 @@ parcel_data['CONDITION'] = parcel_data['CONDITION'] + ' ' + parcel_data['CONDITI
 parcel_data['CONDITIONNUM'] = parcel_data['CONDITION'].map(condition_to_num_map)
 parcel_data['CDU'] = parcel_data['CDU'] + ' ' + parcel_data['CDUDESC']
 parcel_data['HEATINGCOOLING'] = parcel_data['HEATINGCOOLING'] + ' ' + parcel_data['HEATINGCOOLINGDESC']
-parcel_data.rename(columns={'PARID': 'PARCEL_ID'}, inplace=True)
-vacant_codes = ["098 CONDEMNED/BOARDED-UP", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]
 parcel_data['FINISHEDAREA'] = np.where(parcel_data['USE'].isin(vacant_codes), 0, 1)
-
-parcel_geometry.rename(columns={'PIN': 'PARCEL_ID'}, inplace=True)
-census_tracts.rename(columns={'NAME': 'CENSUS_TRACT'}, inplace=True)
+parcel_data['COMMERCIALRENTSINGLE'] = pd.Series(dtype='float')
+parcel_data['COMMERCIALRENT'] = pd.Series(dtype='float')
+parcel_geometry_distance = parcel_geometry.to_crs('EPSG:3857')
+commercial_rents_gdf = commercial_rents_gdf.to_crs('EPSG:3857')
+count = 0
+for i, row in parcel_data.iterrows():
+    count += 1
+    if count % 1000 == 0:
+        print(count, 'entries processed')
+    if row['CLASS'] != 'R RESIDENTIAL' and row['PARCEL_ID'] in parcel_geometry_distance.index:
+        parcel_details = parcel_geometry_distance.loc[row['PARCEL_ID']]
+        if len(parcel_details.shape) > 1:
+            parcel_details = parcel_details.iloc[0]
+        geometry = parcel_details['geometry']
+        distances = commercial_rents_gdf.to_crs('EPSG:3857').distance(geometry)
+        distances.sort_values(ascending=True, inplace=True)
+        values_list = []
+        for parcel_id, distance in distances.items():
+            # Average together at least 1 but no more than 5 nearest commercial rents, no more than 1 km away
+            if len(values_list) >= 5 or (len(values_list) >= 1 and distance > 1000):
+                break
+            values_list.append(commercial_rents_gdf.loc[parcel_id]['PRICE'])
+        parcel_data.at[i, 'COMMERCIALRENT'] = sum(values_list) / float(len(values_list))
 
 pd.set_option('display.max_columns', None)
 print(parcel_data.head())
 print(census_tracts.head())
 print(sales_data.head())
-print(parcel_data.head())
+print(parcel_geometry.head())
+print(market_value.head())
 
-parcel_data.to_csv("parcels.csv", index=False, columns=["PARCEL_ID", "ADDRESS", "PROPERTYCITY", "PROPERTYSTATE", "PROPERTYZIP", "MUNICIPALITY", "SCHOOL", "LEGAL", "NEIGHBORHOOD", "TAXCODE", "TAXSUBCODE", "OWNER", "CLASS", "USE", "LOTAREA", "HOMESTEADFLAG", "FARMSTEADFLAG", "CLEANGREEN", "ABATEMENTFLAG", "COUNTYBUILDING", "COUNTYLAND", "COUNTYTOTAL", "COUNTYEXEMPTBLDG", "LOCALBUILDING", "LOCALLAND", "LOCALTOTAL", "FAIRMARKETBUILDING", "FAIRMARKETLAND", "FAIRMARKETTOTAL", "STYLE", "STORIES", "YEARBLT", "EXTERIORFINISH", "ROOF", "BASEMENT", "GRADE", "GRADENUM", "CONDITION", "CONDITIONNUM", "CDU", "TOTALROOMS", "BEDROOMS", "FULLBATHS", "HALFBATHS", "HEATINGCOOLING", "FIREPLACES", "BSMTGARAGE", "FINISHEDLIVINGAREA", "CARDNUMBER", "ALT_ID", "FINISHEDAREA"])
-sales_data.to_csv("sales.csv", index=False, columns=["PARCEL_ID", "RECORDDATE", "SALEDATE", "SALEPRICE", "SALECODE", "DEEDBOOK", "DEEDPAGE", "CHANGENOTICEADDRESS1", "CHANGENOTICEADDRESS2", "CHANGENOTICEADDRESS3", "CHANGENOTICEADDRESS4", "USE", "SALEYEAR"])
+parcel_data.to_csv("parcels.csv", index=False, columns=["PARCEL_ID", "ADDRESS", "PROPERTYCITY", "PROPERTYSTATE", "PROPERTYZIP", "MUNICIPALITY", "SCHOOL", "LEGAL", "NEIGHBORHOOD", "TAXCODE", "TAXSUBCODE", "OWNER", "CLASS", "USE", "LOTAREA", "HOMESTEADFLAG", "FARMSTEADFLAG", "CLEANGREEN", "ABATEMENTFLAG", "COUNTYBUILDING", "COUNTYLAND", "COUNTYTOTAL", "COUNTYEXEMPTBLDG", "LOCALBUILDING", "LOCALLAND", "LOCALTOTAL", "FAIRMARKETBUILDING", "FAIRMARKETLAND", "FAIRMARKETTOTAL", "STYLE", "STORIES", "YEARBLT", "EXTERIORFINISH", "ROOF", "BASEMENT", "GRADE", "GRADENUM", "CONDITION", "CONDITIONNUM", "CDU", "TOTALROOMS", "BEDROOMS", "FULLBATHS", "HALFBATHS", "HEATINGCOOLING", "FIREPLACES", "BSMTGARAGE", "FINISHEDLIVINGAREA", "CARDNUMBER", "ALT_ID", "FINISHEDAREA", "COMMERCIALRENT"])
+sales_data.to_csv("sales.csv", index=False, columns=["PARCEL_ID", "RECORDDATE", "SALEDATE", "SALEPRICE", "SALECODE", "DEEDBOOK", "DEEDPAGE", "CHANGENOTICEADDRESS1", "CHANGENOTICEADDRESS2", "CHANGENOTICEADDRESS3", "CHANGENOTICEADDRESS4", "USE", "SALEYEAR", "CLASS", "FINISHEDAREA"])
 parcel_geometry.to_parquet('parcels.parquet')
 census_tracts.to_parquet('census_tracts.parquet')
+market_value.to_parquet('market_value.parquet')
