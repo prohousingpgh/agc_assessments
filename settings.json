@@ -495,14 +495,12 @@
 				"quality_grade",
 				"condition",
 				"cdu_grade",
-				"heating_cooling",
-				"market_value_category"
+				"heating_cooling"
 			]
 		},
 		"other": {
 			"categorical": [
-				"owner",
-				"market_value_category"
+				"owner"
 			]
 		}
 	},
