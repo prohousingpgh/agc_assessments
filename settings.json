@@ -168,6 +168,15 @@
 								"commercial"
 							]
 						}
+					},
+					"__comment": "List of fields to compute spatial lag with, alongside a number, indicating the max number of neighboring parcels to include in the weighted average",
+					"fields": {
+						"floor_area_ratio": 25,
+						"bedroom_density": 25,
+						"bldg_age_years": 25,
+						"land_area_sqft": 25,
+						"bldg_quality_num": 25,
+						"bldg_condition_num": 25
 					}
 				}
 			},
@@ -479,16 +488,22 @@
 				"market_value_category"
 			]
 		},
+		"__comment": "Fields classified as 'impr' will be stripped when computing land value - it's important to include all improvement-related fields here.",
 		"impr": {
 			"numeric": [
 				"county_impr_value",
 				"local_building_assessed",
 				"assr_impr_value",
 				"stories",
+				"total_rooms",
 				"bldg_year_built",
 				"bldg_rooms_bed",
 				"full_baths",
-				"half_baths"
+				"half_baths",
+				"basement_garage",
+				"finished_living_area_sqft",
+				"bldg_quality_num",
+				"bldg_condition_num"
 			],
 			"categorical": [
 				"basement_desc",

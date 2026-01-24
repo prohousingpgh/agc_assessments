@@ -3,7 +3,7 @@ import pandas as pd
 import sys
 from pathlib import Path
 
-model_groups = ["residential","commercial","industrial_agricultural_other"]
+model_groups = ["residential","commercial"]
 
 parcel_data = pd.read_csv(sys.argv[1], dtype={'PARID': str, 'PROPERTYHOUSENUM': str, 'PROPERTYFRACTION': str, 'PROPERTYADDRESS': str, 'PROPERTYCITY': str, 'PROPERTYSTATE': str, 'PROPERTYUNIT': str, 'PROPERTYZIP': str, 'MUNICODE': str, 'MUNIDESC': str, 'SCHOOLCODE': str, 'SCHOOLDESC': str, 'LEGAL1': str, 'LEGAL2': str, 'LEGAL3': str, 'NEIGHCODE': str, 'NEIGHDESC': str, 'TAXCODE': str, 'TAXDESC': str, 'TAXSUBCODE': str, 'TAXSUBCODE_DESC': str, 'OWNERCODE': str, 'OWNERDESC': str, 'CLASS': str, 'CLASSDESC': str, 'USECODE': str, 'USEDESC': str, 'LOTAREA': str, 'HOMESTEADFLAG': str, 'FARMSTEADFLAG': str, 'CLEANGREEN': str, 'ABATEMENTFLAG': str, 'RECORDDATE': str, 'SALEDATE': str, 'SALEPRICE': str, 'SALECODE': str, 'SALEDESC': str, 'DEEDBOOK': str, 'DEEDPAGE': str, 'PREVSALEDATE': str, 'PREVSALEPRICE': str, 'PREVSALEDATE2': str, 'PREVSALEPRICE2': str, 'CHANGENOTICEADDRESS1': str, 'CHANGENOTICEADDRESS2': str, 'CHANGENOTICEADDRESS3': str, 'CHANGENOTICEADDRESS4': str, 'COUNTYBUILDING': str, 'COUNTYLAND': str, 'COUNTYTOTAL': str, 'COUNTYEXEMPTBLDG': str, 'LOCALBUILDING': str, 'LOCALLAND': str, 'LOCALTOTAL': str, 'FAIRMARKETBUILDING': str, 'FAIRMARKETLAND': str, 'FAIRMARKETTOTAL': str, 'STYLE': str, 'STYLEDESC': str, 'STORIES': str, 'YEARBLT': str, 'EXTERIORFINISH': str, 'EXTFINISH_DESC': str, 'ROOF': str, 'ROOFDESC': str, 'BASEMENT': str, 'BASEMENTDESC': str, 'GRADE': str, 'GRADEDESC': str, 'CONDITION': str, 'CONDITIONDESC': str, 'CDU': str, 'CDUDESC': str, 'TOTALROOMS': str, 'BEDROOMS': str, 'FULLBATHS': str, 'HALFBATHS': str, 'HEATINGCOOLING': str, 'HEATINGCOOLINGDESC': str, 'FIREPLACES': str, 'BSMTGARAGE': str, 'FINISHEDLIVINGAREA': str, 'CARDNUMBER': str, 'ALT_ID': str, 'TAXYEAR': str, 'ASOFDATE': str})
 parcel_geometry = gpd.read_file(sys.argv[2])
@@ -29,10 +29,11 @@ for x in model_groups:
     for i, row in prediction_data_ensemble_regression.iterrows():
         regression_predictions[row['key']] = row['prediction']
 for i, row in parcel_data.iterrows():
-    total_assessments[row['PARID']] = float(row['FAIRMARKETLAND'])
-    land_assessments[row['PARID']] = float(row['FAIRMARKETTOTAL'])
-    lot_areas[row['PARID']] = float(row['LOTAREA'])
-    building_areas[row['PARID']] = float(row['FINISHEDLIVINGAREA'])
+    if row['CLASS'] == 'R':
+        total_assessments[row['PARID']] = float(row['FAIRMARKETLAND'])
+        land_assessments[row['PARID']] = float(row['FAIRMARKETTOTAL'])
+        lot_areas[row['PARID']] = float(row['LOTAREA'])
+        building_areas[row['PARID']] = float(row['FINISHEDLIVINGAREA'])
 
 print(parcel_geometry.head())
 parcel_geometry.rename(columns={'PIN': 'PARCEL_ID'}, inplace=True)
