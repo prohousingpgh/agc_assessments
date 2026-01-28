@@ -2,6 +2,7 @@ import geopandas as gpd
 import pandas as pd
 import sys
 from pathlib import Path
+from datetime import datetime
 
 model_groups = ["residential","commercial"]
 
@@ -28,8 +29,19 @@ for x in model_groups:
     prediction_data_ensemble_regression = pd.read_csv(openavmkit_output_folder + "/" + x + "/main/mra/pred_universe.csv")
     for i, row in prediction_data_ensemble_regression.iterrows():
         regression_predictions[row['key']] = row['prediction']
+parcel_data['OWNER_OCCUPIED'] = pd.Series(dtype='string')
+parcel_data['YEARS_SINCE_SALE'] = pd.Series(dtype='float64')
 for i, row in parcel_data.iterrows():
+    parcel_data.at[i, 'OWNER_OCCUPIED'] = 'N'
+    if isinstance(row['SALEDATE'], str):
+        sale_date = datetime.strptime(row['SALEDATE'], "%m-%d-%Y")
+        updated_date = datetime.strptime(row['ASOFDATE'], "%d-%b-%y")
+        ownership_time = updated_date - sale_date
+        parcel_data.at[i, 'YEARS_SINCE_SALE'] = ownership_time.total_seconds() / (365 * 24 * 60 * 60)
     if row['CLASS'] == 'R':
+        full_address = str(row['PROPERTYHOUSENUM']) + str(row['PROPERTYFRACTION']) + str(row['PROPERTYADDRESS']) + str(row['PROPERTYUNIT'])
+        if full_address.replace(" ", "") == row['CHANGENOTICEADDRESS1'].replace(" ", ""):
+            parcel_data.at[i, 'OWNER_OCCUPIED'] = 'Y'
         total_assessments[row['PARID']] = float(row['FAIRMARKETLAND'])
         land_assessments[row['PARID']] = float(row['FAIRMARKETTOTAL'])
         lot_areas[row['PARID']] = float(row['LOTAREA'])
