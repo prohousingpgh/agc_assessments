@@ -2,24 +2,32 @@ Instructions for downloading and installing OpenAvmKit are available at https://
 
 # Downloading input files
 
-We need 4 data input files to use OpenAvmKit:<br>
+We need a few data input files to use OpenAvmKit:<br>
 Get the property assessment csv from here: https://data.wprdc.org/dataset/property-assessments<br>
 Get the parcel GeoJSON from here: https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214<br>
-Get the census tract GeoJSON from here: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-census-tracts-2020
-Get market value categories from here: https://data.wprdc.org/dataset/market-value-analysis-2021
+Get the census tract GeoJSON from here: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-census-tracts-2020<br>
+Get market value categories from here: https://data.wprdc.org/dataset/market-value-analysis-2021<br>
+Steep slopes overlay: https://data.wprdc.org/dataset/25-or-greater-slope<br>
+Flood zones: https://data.wprdc.org/dataset/2014-fema-flood-zones<br>
+Undermined overlay: https://data.wprdc.org/dataset/undermined-areas<br>
+Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
+Note that the steep slopes, flood zone, and undermined overlays are for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis.<br>
 
 Run this script, which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
 python getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson
 
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
-python OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202505.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson
+python OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202505.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson slopes.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson
 
 This should generate 5 files:<br>
 parcels.csv<br>
 sales.csv<br>
 parcels.parquet<br>
 census_tracts.parquet<br>
-market_value.parquet
+market_value.parquet<br>
+steep_slopes.parquet<br>
+flood_zones.parquet<br>
+undermined.parquet
 
 Additionally, I've provided the settings.json file which OpenAvmKit uses to read and analyze the data.
 
@@ -67,8 +75,11 @@ notebooks/<br>
 &emsp;&emsp;&emsp;├── in/<br>
 &emsp;&emsp;&emsp;&emsp; ├── geo/<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── census_tracts.parquet<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;  ├── flood_zones.parquet<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── market_value.parquet<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── parcels.parquet<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;  ├── steep_slopes.parquet<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;  ├── undermined.parquet<br>
 &emsp;&emsp;&emsp;&emsp; ├── parcels.csv<br>
 &emsp;&emsp;&emsp;&emsp; ├── sales.csv<br>
 &emsp;&emsp;&emsp;&emsp; ├── settings.json<br>

@@ -32,7 +32,8 @@
 					"owner_desc": ["OWNER", "string"],
 					"class": ["CLASS", "string"],
 					"use": ["USE", "string"],
-					"land_area_sqft": ["LOTAREA", "float"],
+					"lot_area": ["LOTAREA", "float"],
+					"land_area_sqft": ["PARCEL_AREA", "float"],
 					"homestead_flag": ["HOMESTEADFLAG", "string"],
 					"farmstead_flag": ["FARMSTEADFLAG", "string"],
 					"clean_green": ["CLEANGREEN", "string"],
@@ -132,6 +133,30 @@
 				"load": {
 					"market_value_category": ["MARKET_VALUE", "string"]
 				}
+			},
+			"steep_slopes": {
+				"__comment": "Load in steep slope data from https://data.wprdc.org/dataset/25-or-greater-slope",
+				"filename": "geo/steep_slopes.parquet",
+				"dupes": "allow",
+				"load": {
+					"steep_slope": ["STEEP_SLOPE", "string"]
+				}
+			},
+			"flood_zones": {
+				"__comment": "Load in flood zone data from https://data.wprdc.org/dataset/2014-fema-flood-zones",
+				"filename": "geo/flood_zones.parquet",
+				"dupes": "allow",
+				"load": {
+					"flood_zone": ["FLOOD_ZONE", "string"]
+				}
+			},
+			"undermined": {
+				"__comment": "Load in undermined data from https://data.wprdc.org/dataset/undermined-areas",
+				"filename": "geo/undermined.parquet",
+				"dupes": "allow",
+				"load": {
+					"undermined": ["UNDERMINED", "string"]
+				}
 			}
 		},
 		"process": {
@@ -148,10 +173,13 @@
 				"sales": "$$ref.dupes_key_sale"
 			},
 			"enrich": {
-				"__comment1": "Join the census tract and market value category onto the universe.",
+				"__comment1": "Join the geometric categories onto the universe.",
 				"geometry": [
 					"census_tracts",
-					"market_value"
+					"market_value",
+					"steep_slopes",
+					"flood_zones",
+					"undermined"
 				],
 
 				"__comment2": "spatial_lag computes weighted average of nearby (with a half mile) parcels. This is computed for a few different fields, including sale prices, building quality, building condition, and building age.",
@@ -177,7 +205,8 @@
 						"land_area_sqft": 25,
 						"bldg_quality_num": 25,
 						"bldg_condition_num": 25
-					}
+					},
+					"sale_price": 25
 				}
 			},
 			"fill": {
@@ -194,8 +223,7 @@
 					"homestead_flag",
 					"farmstead_flag",
 					"clean_green",
-					"abatement_flag",
-					"market_value_category"
+					"abatement_flag"
 				],
 				"unknown": [
 					"city",
@@ -219,13 +247,18 @@
 					"quality_grade",
 					"condition",
 					"cdu_grade",
-					"heating_cooling"
+					"heating_cooling",
+					"market_value_category",
+					"steep_slope",
+					"flood_zone",
+					"undermined"
 				],
 				"median": [
 					"bldg_quality_num",
 					"bldg_condition_num"
 				],
 				"zero_impr": [
+					"lot_area",
 					"land_area_sqft",
 					"stories",
 					"bldg_year_built",
@@ -242,6 +275,7 @@
 				"mode_impr": [
 				],
 				"zero_vacant": [
+					"lot_area",
 					"land_area_sqft",
 					"stories",
 					"bldg_year_built",
@@ -292,7 +326,10 @@
 				"spatial_lag_bldg_condition_num",
 				"spatial_lag_floor_area_ratio",
 				"spatial_lag_sale_price_time_adj",
-				"spatial_lag_sale_price_time_adj_impr_sqft"
+				"spatial_lag_sale_price_time_adj_impr_sqft",
+				"steep_slope",
+				"flood_zone",
+				"undermined"
 			]
 		},
 		"metadata": {
@@ -305,7 +342,7 @@
 		},
 		"instructions": {
 			"__comment": "This is where the models actually get run to generate predictions. We run a few different models and combine them to get the final assessments.",
-			"__comment2": "'assessor' just takes the existing assessments. 'mra' is a standard regression. 'local_area' and 'spatial_lag_area' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are fancy machine learning decision tree models.",
+			"__comment2": "'assessor' just takes the existing assessments. 'mra' is a standard regression. 'local_area' and 'spatial_lag_area' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are fancy machine learning decision tree models. 'gwr' is gradient-weighted regression.",
 			"main": {
 				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
 				"stacked_ensemble": {
@@ -329,7 +366,6 @@
 				}
 			},
 			"vacant": {
-				"__run": ["assessor", "gwr", "mra", "lightgbm", "catboost", "xgboost", "local_area", "spatial_lag_area"],
 				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "catboost", "xgboost", "gwr"],
 				"stacked_ensemble": {
 					"enabled": true,
@@ -383,7 +419,10 @@
 						"spatial_lag_bldg_quality_num",
 						"spatial_lag_bldg_condition_num",
 						"spatial_lag_floor_area_ratio",
-						"spatial_lag_sale_price_time_adj_impr_sqft"
+						"spatial_lag_sale_price_time_adj_impr_sqft",
+						"steep_slope",
+						"flood_zone",
+						"undermined"
 					]
 				}
 			},
@@ -408,7 +447,10 @@
 						"spatial_lag_bldg_quality_num",
 						"spatial_lag_bldg_condition_num",
 						"spatial_lag_floor_area_ratio",
-						"spatial_lag_sale_price_time_adj_impr_sqft"
+						"spatial_lag_sale_price_time_adj_impr_sqft",
+						"steep_slope",
+						"flood_zone",
+						"undermined"
 					]
 				}
 			},
@@ -423,7 +465,10 @@
 						"spatial_lag_bldg_quality_num",
 						"spatial_lag_bldg_condition_num",
 						"spatial_lag_floor_area_ratio",
-						"spatial_lag_sale_price_time_adj_impr_sqft"
+						"spatial_lag_sale_price_time_adj_impr_sqft",
+						"steep_slope",
+						"flood_zone",
+						"undermined"
 					]
 				}
 			}
@@ -485,7 +530,10 @@
 			"numeric": [
 			],
 			"categorical": [
-				"market_value_category"
+				"market_value_category",
+				"steep_slope",
+				"flood_zone",
+				"undermined"
 			]
 		},
 		"__comment": "Fields classified as 'impr' will be stripped when computing land value - it's important to include all improvement-related fields here.",

@@ -11,21 +11,26 @@ parcel_geometry = gpd.read_file(sys.argv[2])
 openavmkit_output_folder = sys.argv[3]
 predictions = {}
 land_predictions = {}
+land_predictions_mra = {}
 regression_predictions = {}
 total_assessments = {}
 land_assessments = {}
-lot_areas = {}
+land_areas = {}
 building_areas = {}
 for x in model_groups:
     print(x)
     prediction_data_ensemble = pd.read_csv(openavmkit_output_folder + "/" + x + "/main/ensemble/pred_universe.csv")
     for i, row in prediction_data_ensemble.iterrows():
         predictions[row['key']] = row['prediction']
+        land_areas[row['key']] = float(row['land_area_sqft'])
     land_file = openavmkit_output_folder + "/" + x + "/hedonic_land/ensemble/pred_universe.csv"
     if Path(land_file).exists():
         prediction_data_ensemble_land = pd.read_csv(openavmkit_output_folder + "/" + x + "/hedonic_land/ensemble/pred_universe.csv")
         for i, row in prediction_data_ensemble_land.iterrows():
             land_predictions[row['key']] = row['prediction']
+        prediction_data_mra_land = pd.read_csv(openavmkit_output_folder + "/" + x + "/hedonic_land/mra/pred_universe.csv")
+        for i, row in prediction_data_mra_land.iterrows():
+            land_predictions_mra[row['key']] = row['prediction']
     prediction_data_ensemble_regression = pd.read_csv(openavmkit_output_folder + "/" + x + "/main/mra/pred_universe.csv")
     for i, row in prediction_data_ensemble_regression.iterrows():
         regression_predictions[row['key']] = row['prediction']
@@ -44,20 +49,22 @@ for i, row in parcel_data.iterrows():
             parcel_data.at[i, 'OWNER_OCCUPIED'] = 'Y'
         total_assessments[row['PARID']] = float(row['FAIRMARKETLAND'])
         land_assessments[row['PARID']] = float(row['FAIRMARKETTOTAL'])
-        lot_areas[row['PARID']] = float(row['LOTAREA'])
         building_areas[row['PARID']] = float(row['FINISHEDLIVINGAREA'])
 
 print(parcel_geometry.head())
 parcel_geometry.rename(columns={'PIN': 'PARCEL_ID'}, inplace=True)
 parcel_geometry_assessments = parcel_geometry[['PARCEL_ID','geometry']]
-parcel_data['prediction'] = parcel_data['PARID'].map(predictions)
+parcel_data['total_prediction'] = parcel_data['PARID'].map(predictions)
 parcel_data['land_prediction'] = parcel_data['PARID'].map(land_predictions)
 parcel_data['regression_prediction'] = parcel_data['PARID'].map(regression_predictions)
-parcel_geometry_assessments['prediction_land'] = parcel_geometry_assessments['PARCEL_ID'].map(land_predictions)
-parcel_geometry_assessments['prediction_total'] = parcel_geometry_assessments['PARCEL_ID'].map(predictions)
+parcel_data['regression_land_prediction'] = parcel_data['PARID'].map(land_predictions_mra)
+parcel_data['land_area_sqft'] = parcel_data['PARID'].map(land_areas)
+parcel_geometry_assessments['land_prediction'] = parcel_geometry_assessments['PARCEL_ID'].map(land_predictions)
+parcel_geometry_assessments['total_prediction'] = parcel_geometry_assessments['PARCEL_ID'].map(predictions)
+parcel_geometry_assessments['regression_land_prediction'] = parcel_geometry_assessments['PARCEL_ID'].map(land_predictions_mra)
 parcel_geometry_assessments['assessed_land'] = parcel_geometry_assessments['PARCEL_ID'].map(land_assessments)
 parcel_geometry_assessments['assessed_total'] = parcel_geometry_assessments['PARCEL_ID'].map(total_assessments)
-parcel_geometry_assessments['lot_area'] = parcel_geometry_assessments['PARCEL_ID'].map(lot_areas)
+parcel_geometry_assessments['land_area_sqft'] = parcel_geometry_assessments['PARCEL_ID'].map(land_areas)
 parcel_geometry_assessments['building_area'] = parcel_geometry_assessments['PARCEL_ID'].map(building_areas)
 parcel_data.to_csv("predictions.csv", index=False)
 parcel_geometry_assessments.to_parquet('predictions.parquet')
