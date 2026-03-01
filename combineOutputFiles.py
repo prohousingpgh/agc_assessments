@@ -16,6 +16,7 @@ regression_predictions = {}
 total_assessments = {}
 land_assessments = {}
 land_areas = {}
+census_tracts = {}
 building_areas = {}
 for x in model_groups:
     print(x)
@@ -23,6 +24,7 @@ for x in model_groups:
     for i, row in prediction_data_ensemble.iterrows():
         predictions[row['key']] = row['prediction']
         land_areas[row['key']] = float(row['land_area_sqft'])
+        census_tracts[row['key']] = row['census_tract']
     land_file = openavmkit_output_folder + "/" + x + "/hedonic_land/ensemble/pred_universe.csv"
     if Path(land_file).exists():
         prediction_data_ensemble_land = pd.read_csv(openavmkit_output_folder + "/" + x + "/hedonic_land/ensemble/pred_universe.csv")
@@ -47,24 +49,41 @@ for i, row in parcel_data.iterrows():
         full_address = str(row['PROPERTYHOUSENUM']) + str(row['PROPERTYFRACTION']) + str(row['PROPERTYADDRESS']) + str(row['PROPERTYUNIT'])
         if full_address.replace(" ", "") == row['CHANGENOTICEADDRESS1'].replace(" ", ""):
             parcel_data.at[i, 'OWNER_OCCUPIED'] = 'Y'
-        total_assessments[row['PARID']] = float(row['FAIRMARKETLAND'])
-        land_assessments[row['PARID']] = float(row['FAIRMARKETTOTAL'])
-        building_areas[row['PARID']] = float(row['FINISHEDLIVINGAREA'])
+    land_assessments[row['PARID']] = float(row['FAIRMARKETLAND'])
+    total_assessments[row['PARID']] = float(row['FAIRMARKETTOTAL'])
+    building_areas[row['PARID']] = float(row['FINISHEDLIVINGAREA'])
 
 print(parcel_geometry.head())
 parcel_geometry.rename(columns={'PIN': 'PARCEL_ID'}, inplace=True)
-parcel_geometry_assessments = parcel_geometry[['PARCEL_ID','geometry']]
 parcel_data['total_prediction'] = parcel_data['PARID'].map(predictions)
 parcel_data['land_prediction'] = parcel_data['PARID'].map(land_predictions)
 parcel_data['regression_prediction'] = parcel_data['PARID'].map(regression_predictions)
 parcel_data['regression_land_prediction'] = parcel_data['PARID'].map(land_predictions_mra)
+parcel_data['assessed_land'] = parcel_data['PARID'].map(land_assessments)
+parcel_data['assessed_total'] = parcel_data['PARID'].map(total_assessments)
 parcel_data['land_area_sqft'] = parcel_data['PARID'].map(land_areas)
-parcel_geometry_assessments['land_prediction'] = parcel_geometry_assessments['PARCEL_ID'].map(land_predictions)
-parcel_geometry_assessments['total_prediction'] = parcel_geometry_assessments['PARCEL_ID'].map(predictions)
-parcel_geometry_assessments['regression_land_prediction'] = parcel_geometry_assessments['PARCEL_ID'].map(land_predictions_mra)
-parcel_geometry_assessments['assessed_land'] = parcel_geometry_assessments['PARCEL_ID'].map(land_assessments)
-parcel_geometry_assessments['assessed_total'] = parcel_geometry_assessments['PARCEL_ID'].map(total_assessments)
-parcel_geometry_assessments['land_area_sqft'] = parcel_geometry_assessments['PARCEL_ID'].map(land_areas)
-parcel_geometry_assessments['building_area'] = parcel_geometry_assessments['PARCEL_ID'].map(building_areas)
+parcel_data['building_area'] = parcel_data['PARID'].map(building_areas)
+parcel_data['census_tract'] = parcel_data['PARID'].map(census_tracts)
+
+# Simple land valuation algorithm - https://progressandpoverty.substack.com/p/valuing-land-the-simplest-viable
+median_assessments = parcel_data.groupby(['census_tract'])['total_prediction'].median().reset_index()
+median_lot_sizes = parcel_data.groupby(['census_tract'])['land_area_sqft'].median().reset_index()
+total_land_valuations = parcel_data.groupby(['census_tract'])['assessed_land'].sum().reset_index()
+total_valuations = parcel_data.groupby(['census_tract'])['assessed_total'].sum().reset_index()
+price_per_sqft = median_assessments.merge(median_lot_sizes, left_on=['census_tract'], right_on=['census_tract'])
+price_per_sqft['census_tract_total_price_per_sqft'] = price_per_sqft['total_prediction'] / price_per_sqft['land_area_sqft']
+valuation_ratios = total_land_valuations.merge(total_valuations, left_on=['census_tract'], right_on=['census_tract'])
+valuation_ratios['census_tract_land_percentage'] = valuation_ratios['assessed_land'] / valuation_ratios['assessed_total']
+census_tract_land_price_per_sqft = price_per_sqft.merge(valuation_ratios, left_on=['census_tract'], right_on=['census_tract'])
+census_tract_land_price_per_sqft['census_tract_land_price_per_sqft'] = census_tract_land_price_per_sqft['census_tract_total_price_per_sqft'] * census_tract_land_price_per_sqft['census_tract_land_percentage']
+census_tract_land_price_per_sqft = census_tract_land_price_per_sqft[['census_tract','census_tract_total_price_per_sqft','census_tract_land_percentage','census_tract_land_price_per_sqft']]
+pd.set_option('display.max_columns', None)
+print(census_tract_land_price_per_sqft)
+parcel_data = parcel_data.merge(census_tract_land_price_per_sqft, how='left', left_on=['census_tract'], right_on=['census_tract'])
+parcel_data['lycd_land_prediction'] = parcel_data['land_area_sqft'] * parcel_data['census_tract_land_price_per_sqft']
+
+parcel_geometry_assessments = parcel_geometry[['PARCEL_ID','geometry']]
+parcel_geometry_assessments = parcel_geometry_assessments.merge(parcel_data, left_on=['PARCEL_ID'], right_on=['PARID'])
+
 parcel_data.to_csv("predictions.csv", index=False)
 parcel_geometry_assessments.to_parquet('predictions.parquet')
