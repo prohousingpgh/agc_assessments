@@ -186,9 +186,14 @@
 				"spatial_lag": {
 					"model_groups": {
 						"__comment": "The spatial_lag fields for residential will be based off the values of nearby residential parcels, and the fields for commercial will be based off nearby commercial parcels. This can be changed - if we want to, we can include residential parcels in the commercial spatial lag computations.",
-						"residential": {
+						"residential_single_family": {
 							"sample_from": [
-								"residential"
+								"residential_single_family"
+							]
+						},
+						"residential_multi_family": {
+							"sample_from": [
+								"residential_multi_family"
 							]
 						},
 						"commercial": {
@@ -366,11 +371,11 @@
 				}
 			},
 			"vacant": {
-				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "catboost", "xgboost", "gwr"],
+				"run": [],
 				"stacked_ensemble": {
 					"enabled": true,
 					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "catboost", "xgboost"],
+					"models_to_include": [],
 					"contextual_features": [],
 					"categorical_contextual_features": [],
 					"validation_fraction": 0.2
@@ -388,7 +393,8 @@
 			},
 			"model_group_order": [
 				"commercial",
-				"residential"
+				"residential_multi_family",
+				"residential_single_family"
 			],
 			"feature_selection": {
 				"thresholds": {
@@ -485,9 +491,13 @@
 				"name": "Commercial",
 				"filter": ["or", "$$ref.filters.commercial"]
 			},
-			"residential": {
-				"name": "Residential",
-				"filter": ["or", "$$ref.filters.residential"]
+			"residential_multi_family": {
+				"name": "Residential Multi Family",
+				"filter": ["or", "$$ref.filters.residential_multi_family"]
+			},
+			"residential_single_family": {
+				"name": "Residential Multi Family",
+				"filter": ["or", "$$ref.filters.residential_single_family"]
 			}
 		}
 	},
@@ -576,8 +586,13 @@
 	"ref": {
 		"filters": {
 			"__comment": "These are the definitions for our model groups",
-			"residential":  ["or",
-				["isin", "class", ["R RESIDENTIAL"]]
+			"residential_single_family":  ["and",
+				["isin", "class", ["R RESIDENTIAL"]],
+				["isin", "use", ["010 SINGLE FAMILY", "060 TOWNHOUSE", "070 ROWHOUSE", "080 MOBILE HOME", "090 MOBILE HOME (IN PARK)", "098 CONDEMNED/BOARDED-UP", "099 RES AUX BUILDING (NO HOUSE)", "100 VACANT LAND", "111 BUILDERS LOT", "500 RESIDENTIAL VACANT LAND"]]
+			],
+			"residential_multi_family":  ["and",
+				["isin", "class", ["R RESIDENTIAL"]],
+				["notin", "use", ["010 SINGLE FAMILY", "060 TOWNHOUSE", "070 ROWHOUSE", "080 MOBILE HOME", "090 MOBILE HOME (IN PARK)", "098 CONDEMNED/BOARDED-UP", "099 RES AUX BUILDING (NO HOUSE)", "100 VACANT LAND", "111 BUILDERS LOT", "500 RESIDENTIAL VACANT LAND"]]
 			],
 			"commercial":  ["or",
 				["isin", "class", ["C COMMERCIAL", "I INDUSTRIAL", "F AGRICULTURAL", "G GOVERNMENT", "U UTILITIES", "O OTHER"]]
