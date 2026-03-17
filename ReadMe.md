@@ -16,8 +16,11 @@ Note that the steep slopes, flood zone, and undermined overlays are for Pittsbur
 Run this script, which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
 python getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson
 
+Get commercial parcel data by extracting json responses from the search page of Crexi (https://www.crexi.com/search). These responses can be combined into a csv using this script:
+python processCrexiData.py
+
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
-python OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202505.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson slopes.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson
+python OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202505.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson slopes.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv
 
 This should generate 5 files:<br>
 parcels.csv<br>

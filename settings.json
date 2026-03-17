@@ -70,7 +70,13 @@
 					"card_number": ["CARDNUMBER", "string"],
 					"alt_id": ["ALT_ID", "string"],
 					"bldg_area_finished_sqft": ["FINISHEDAREA", "float"],
-					"commercial_rent": ["COMMERCIALRENT", "float"]
+					"commercial_rent": ["COMMERCIALRENT", "float"],
+					"address_count": ["ADDRESS_COUNT", "float"],
+					"building_count": ["BUILDING_COUNT", "float"],
+					"unit_count": ["UNIT_COUNT", "float"],
+					"building_footprint": ["BUILDING_FOOTPRINT", "float"],
+					"building_area": ["BUILDING_AREA", "float"],
+					"is_pittsburgh_sd": ["IS_PITTSBURGH_SD", "bool"]
 				}
 			},
 			"sales": {
@@ -198,7 +204,8 @@
 						},
 						"commercial": {
 							"sample_from": [
-								"commercial"
+								"residential_single_family",
+								"residential_multi_family"
 							]
 						}
 					},
@@ -260,7 +267,12 @@
 				],
 				"median": [
 					"bldg_quality_num",
-					"bldg_condition_num"
+					"bldg_condition_num",
+					"address_count",
+					"building_count",
+					"unit_count",
+					"building_footprint",
+					"building_area"
 				],
 				"zero_impr": [
 					"lot_area",
@@ -323,6 +335,11 @@
 				"bldg_quality_num",
 				"bldg_condition_num",
 				"commercial_rent",
+				"address_count",
+				"building_count",
+				"unit_count",
+				"building_footprint",
+				"building_area",
 				"market_value_category",
 				"spatial_lag_bedroom_density",
 				"spatial_lag_bldg_age_years",
@@ -334,7 +351,8 @@
 				"spatial_lag_sale_price_time_adj_impr_sqft",
 				"steep_slope",
 				"flood_zone",
-				"undermined"
+				"undermined",
+				"is_pittsburgh_sd"
 			]
 		},
 		"metadata": {
@@ -349,22 +367,22 @@
 			"__comment": "This is where the models actually get run to generate predictions. We run a few different models and combine them to get the final assessments.",
 			"__comment2": "'assessor' just takes the existing assessments. 'mra' is a standard regression. 'local_area' and 'spatial_lag_area' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are fancy machine learning decision tree models. 'gwr' is gradient-weighted regression.",
 			"main": {
-				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
+				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
 				"stacked_ensemble": {
 					"enabled": true,
 					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
+					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
 					"contextual_features": [],
 					"categorical_contextual_features": [],
 					"validation_fraction": 0.2
 				}
 			},
 			"hedonic": {
-				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
+				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
 				"stacked_ensemble": {
 					"enabled": true,
 					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
+					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
 					"contextual_features": [],
 					"categorical_contextual_features": [],
 					"validation_fraction": 0.2
@@ -385,7 +403,7 @@
 				"period": "Q"
 			},
 			"allocation": {
-				"hedonic": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost", "catboost"],
+				"hedonic": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
 				"vacant": ["local_area", "spatial_lag_area"],
 				"plot": {
 
@@ -419,18 +437,12 @@
 						"bldg_quality_num",
 						"bldg_condition_num",
 						"commercial_rent",
-						"market_value_category",
-						"spatial_lag_bedroom_density",
-						"spatial_lag_bldg_age_years",
-						"spatial_lag_land_area_sqft",
-						"spatial_lag_bldg_quality_num",
-						"spatial_lag_bldg_condition_num",
-						"spatial_lag_floor_area_ratio",
-						"spatial_lag_sale_price_time_adj",
+						"building_footprint",
 						"spatial_lag_sale_price_time_adj_impr_sqft",
 						"steep_slope",
 						"flood_zone",
-						"undermined"
+						"undermined",
+						"is_pittsburgh_sd"
 					]
 				}
 			},
@@ -449,18 +461,12 @@
 						"bldg_quality_num",
 						"bldg_condition_num",
 						"commercial_rent",
-						"market_value_category",
-						"spatial_lag_bedroom_density",
-						"spatial_lag_bldg_age_years",
-						"spatial_lag_land_area_sqft",
-						"spatial_lag_bldg_quality_num",
-						"spatial_lag_bldg_condition_num",
-						"spatial_lag_floor_area_ratio",
-						"spatial_lag_sale_price_time_adj",
+						"building_footprint",
 						"spatial_lag_sale_price_time_adj_impr_sqft",
 						"steep_slope",
 						"flood_zone",
-						"undermined"
+						"undermined",
+						"is_pittsburgh_sd"
 					]
 				}
 			},
@@ -469,18 +475,11 @@
 					"ind_vars": [
 						"land_area_sqft",
 						"commercial_rent",
-						"market_value_category",
-						"spatial_lag_bedroom_density",
-						"spatial_lag_bldg_age_years",
-						"spatial_lag_land_area_sqft",
-						"spatial_lag_bldg_quality_num",
-						"spatial_lag_bldg_condition_num",
-						"spatial_lag_floor_area_ratio",
-						"spatial_lag_sale_price_time_adj",
 						"spatial_lag_sale_price_time_adj_impr_sqft",
 						"steep_slope",
 						"flood_zone",
-						"undermined"
+						"undermined",
+						"is_pittsburgh_sd"
 					]
 				}
 			}
@@ -496,7 +495,7 @@
 				"filter": ["or", "$$ref.filters.residential_multi_family"]
 			},
 			"residential_single_family": {
-				"name": "Residential Multi Family",
+				"name": "Residential Single Family",
 				"filter": ["or", "$$ref.filters.residential_single_family"]
 			}
 		}
@@ -544,6 +543,8 @@
 		},
 		"land": {
 			"numeric": [
+				"commercial_rent",
+				"is_pittsburgh_sd"
 			],
 			"categorical": [
 				"market_value_category",
@@ -567,7 +568,12 @@
 				"basement_garage",
 				"finished_living_area_sqft",
 				"bldg_quality_num",
-				"bldg_condition_num"
+				"bldg_condition_num",
+				"address_count",
+				"building_count",
+				"unit_count",
+				"building_footprint",
+				"building_area"
 			],
 			"categorical": [
 				"basement_desc",
@@ -595,7 +601,10 @@
 				["notin", "use", ["010 SINGLE FAMILY", "060 TOWNHOUSE", "070 ROWHOUSE", "080 MOBILE HOME", "090 MOBILE HOME (IN PARK)", "098 CONDEMNED/BOARDED-UP", "099 RES AUX BUILDING (NO HOUSE)", "100 VACANT LAND", "111 BUILDERS LOT", "500 RESIDENTIAL VACANT LAND"]]
 			],
 			"commercial":  ["or",
-				["isin", "class", ["C COMMERCIAL", "I INDUSTRIAL", "F AGRICULTURAL", "G GOVERNMENT", "U UTILITIES", "O OTHER"]]
+				["isin", "class", ["C COMMERCIAL"]]
+			],
+			"other":  ["or",
+				["isin", "class", ["I INDUSTRIAL", "F AGRICULTURAL", "G GOVERNMENT", "U UTILITIES", "O OTHER"]]
 			]
 		},
 		"dupes": {
