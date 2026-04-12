@@ -76,7 +76,7 @@
 					"unit_count": ["UNIT_COUNT", "float"],
 					"building_footprint": ["BUILDING_FOOTPRINT", "float"],
 					"building_area": ["BUILDING_AREA", "float"],
-					"is_pittsburgh_sd": ["IS_PITTSBURGH_SD", "bool"]
+					"is_pittsburgh_sd": ["IS_PITTSBURGH_SD", "float"]
 				}
 			},
 			"sales": {
