@@ -15,6 +15,7 @@ land_predictions_mra = {}
 regression_predictions = {}
 land_areas = {}
 census_tracts = {}
+universe_data = pd.DataFrame(data={}, columns=['key','spatial_lag_sale_price_time_adj','spatial_lag_sale_price_time_adj_confidence','spatial_lag_sale_price_time_adj_vacant','spatial_lag_sale_price_time_adj_vacant_confidence','spatial_lag_sale_price_time_adj_land_sqft','spatial_lag_sale_price_time_adj_land_sqft_confidence','spatial_lag_sale_price_time_adj_impr_sqft','spatial_lag_sale_price_time_adj_impr_sqft_confidence','spatial_lag_floor_area_ratio','spatial_lag_bedroom_density','spatial_lag_bldg_age_years','spatial_lag_bldg_area_finished_sqft','spatial_lag_land_area_sqft','spatial_lag_bldg_quality_num','spatial_lag_bldg_condition_num'])
 for x in model_groups:
     print(x)
     prediction_data_ensemble = pd.read_csv(openavmkit_output_folder + "/" + x + "/main/ensemble/pred_universe.csv")
@@ -33,6 +34,11 @@ for x in model_groups:
     prediction_data_ensemble_regression = pd.read_csv(openavmkit_output_folder + "/" + x + "/main/mra/pred_universe.csv")
     for i, row in prediction_data_ensemble_regression.iterrows():
         regression_predictions[row['key']] = row['prediction']
+    universe = pd.read_csv(openavmkit_output_folder + "/" + x + "/main/mra/universe.csv", usecols=['key','spatial_lag_sale_price_time_adj','spatial_lag_sale_price_time_adj_confidence','spatial_lag_sale_price_time_adj_vacant','spatial_lag_sale_price_time_adj_vacant_confidence','spatial_lag_sale_price_time_adj_land_sqft','spatial_lag_sale_price_time_adj_land_sqft_confidence','spatial_lag_sale_price_time_adj_impr_sqft','spatial_lag_sale_price_time_adj_impr_sqft_confidence','spatial_lag_floor_area_ratio','spatial_lag_bedroom_density','spatial_lag_bldg_age_years','spatial_lag_bldg_area_finished_sqft','spatial_lag_land_area_sqft','spatial_lag_bldg_quality_num','spatial_lag_bldg_condition_num'])
+    universe_data = pd.concat([universe_data, universe])
+
+universe_data.rename(columns={'key': 'PARID'}, inplace=True)
+parcel_data = parcel_data.merge(universe_data, how='left', on='PARID')
 
 parcel_data['total_prediction'] = parcel_data['PARID'].map(predictions)
 parcel_data['land_prediction'] = parcel_data['PARID'].map(land_predictions)

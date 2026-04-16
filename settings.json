@@ -163,6 +163,22 @@
 				"load": {
 					"undermined": ["UNDERMINED", "string"]
 				}
+			},
+			"city_council_districts": {
+				"__comment": "Load in city council district from https://data.wprdc.org/dataset/city-council-districts-2012",
+				"filename": "geo/city_council_districts.parquet",
+				"dupes": "allow",
+				"load": {
+					"city_council_district": ["CITY_COUNCIL_DISTRICT", "string"]
+				}
+			},
+			"county_council_districts": {
+				"__comment": "Load in county council district from https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts",
+				"filename": "geo/county_council_districts.parquet",
+				"dupes": "allow",
+				"load": {
+					"county_council_district": ["COUNTY_COUNCIL_DISTRICT", "string"]
+				}
 			}
 		},
 		"process": {
@@ -185,7 +201,9 @@
 					"market_value",
 					"steep_slopes",
 					"flood_zones",
-					"undermined"
+					"undermined",
+					"city_council_districts",
+					"county_council_districts"
 				],
 
 				"__comment2": "spatial_lag computes weighted average of nearby (with a half mile) parcels. This is computed for a few different fields, including sale prices, building quality, building condition, and building age.",
@@ -218,7 +236,7 @@
 						"bldg_quality_num": 25,
 						"bldg_condition_num": 25
 					},
-					"sale_price": 25
+					"sale_price": 10
 				}
 			},
 			"fill": {
@@ -426,23 +444,15 @@
 				"default": {
 					"ind_vars": [
 						"land_area_sqft",
-						"stories",
 						"bldg_year_built",
-						"total_rooms",
-						"bldg_rooms_bed",
-						"full_baths",
-						"half_baths",
-						"basement_garage",
 						"finished_living_area_sqft",
 						"bldg_quality_num",
 						"bldg_condition_num",
 						"commercial_rent",
 						"building_footprint",
-						"spatial_lag_sale_price_time_adj_impr_sqft",
-						"steep_slope",
-						"flood_zone",
-						"undermined",
-						"is_pittsburgh_sd"
+						"spatial_lag_sale_price_time_adj",
+						"spatial_lag_bldg_condition_num",
+						"spatial_lag_bldg_area_finished_sqft"
 					]
 				}
 			},
@@ -450,23 +460,15 @@
 				"default": {
 					"ind_vars": [
 						"land_area_sqft",
-						"stories",
 						"bldg_year_built",
-						"total_rooms",
-						"bldg_rooms_bed",
-						"full_baths",
-						"half_baths",
-						"basement_garage",
 						"finished_living_area_sqft",
 						"bldg_quality_num",
 						"bldg_condition_num",
 						"commercial_rent",
 						"building_footprint",
-						"spatial_lag_sale_price_time_adj_impr_sqft",
-						"steep_slope",
-						"flood_zone",
-						"undermined",
-						"is_pittsburgh_sd"
+						"spatial_lag_sale_price_time_adj",
+						"spatial_lag_bldg_condition_num",
+						"spatial_lag_bldg_area_finished_sqft"
 					]
 				}
 			},
@@ -475,11 +477,9 @@
 					"ind_vars": [
 						"land_area_sqft",
 						"commercial_rent",
-						"spatial_lag_sale_price_time_adj_impr_sqft",
-						"steep_slope",
-						"flood_zone",
-						"undermined",
-						"is_pittsburgh_sd"
+						"spatial_lag_sale_price_time_adj",
+						"spatial_lag_bldg_condition_num",
+						"spatial_lag_bldg_area_finished_sqft"
 					]
 				}
 			}
@@ -550,7 +550,9 @@
 				"market_value_category",
 				"steep_slope",
 				"flood_zone",
-				"undermined"
+				"undermined",
+				"city_council_district",
+				"county_council_district"
 			]
 		},
 		"__comment": "Fields classified as 'impr' will be stripped when computing land value - it's important to include all improvement-related fields here.",

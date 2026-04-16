@@ -49,6 +49,8 @@ flood_zones = gpd.read_file(sys.argv[7])
 undermined = gpd.read_file(sys.argv[8])
 city_boundary = gpd.read_file(sys.argv[9])
 crexi_data = gpd.read_file(sys.argv[10])
+city_council_districts = gpd.read_file(sys.argv[11])
+county_council_districts = gpd.read_file(sys.argv[12])
 
 parcel_data.rename(columns={'PARID': 'PARCEL_ID'}, inplace=True)
 parcel_geometry.rename(columns={'PIN': 'PARCEL_ID'}, inplace=True)
@@ -57,6 +59,8 @@ market_value.rename(columns={'MVA21': 'MARKET_VALUE'}, inplace=True)
 steep_slopes.rename(columns={'slope25': 'STEEP_SLOPE'}, inplace=True)
 flood_zones.rename(columns={'fld_zone': 'FLOOD_ZONE'}, inplace=True)
 undermined.rename(columns={'undermined': 'UNDERMINED'}, inplace=True)
+city_council_districts.rename(columns={'DIST_NAME': 'CITY_COUNCIL_DISTRICT'}, inplace=True)
+county_council_districts.rename(columns={'LABEL': 'COUNTY_COUNCIL_DISTRICT'}, inplace=True)
 
 commercial_rents_gdf = gpd.GeoDataFrame(
     commercial_rents, geometry=gpd.points_from_xy(commercial_rents['LONGITUDE'], commercial_rents['LATITUDE']), crs="EPSG:4326"
@@ -157,3 +161,6 @@ diff = city_boundary.union_all().difference(undermined.union_all())
 rest_of_pittsburgh = gpd.GeoDataFrame(data={"UNDERMINED": "No", "geometry": diff}, index=[0], crs="EPSG:4326")
 undermined = pd.concat([undermined, rest_of_pittsburgh])
 undermined.to_parquet('undermined.parquet')
+
+city_council_districts.to_parquet('city_council_districts.parquet')
+county_council_districts.to_parquet('county_council_districts.parquet')

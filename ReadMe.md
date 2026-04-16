@@ -11,6 +11,8 @@ Steep slopes overlay: https://data.wprdc.org/dataset/25-or-greater-slope<br>
 Flood zones: https://data.wprdc.org/dataset/2014-fema-flood-zones<br>
 Undermined overlay: https://data.wprdc.org/dataset/undermined-areas<br>
 Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
+City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
+County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
 Note that the steep slopes, flood zone, and undermined overlays are for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis.<br>
 
 Run this script, which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
@@ -20,9 +22,9 @@ Get commercial parcel data by extracting json responses from the search page of 
 python processCrexiData.py
 
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
-python OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202505.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson slopes.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv
+python OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson slopes.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv city_council_districts_2022.geojson County_Council_Districts_-7561056125954294637.geojson
 
-This should generate 5 files:<br>
+This should generate 10 files:<br>
 parcels.csv<br>
 sales.csv<br>
 parcels.parquet<br>
@@ -30,7 +32,9 @@ census_tracts.parquet<br>
 market_value.parquet<br>
 steep_slopes.parquet<br>
 flood_zones.parquet<br>
-undermined.parquet
+undermined.parquet<br>
+city_council_districts.parquet<br>
+county_council_districts.parquet
 
 Additionally, I've provided the settings.json file which OpenAvmKit uses to read and analyze the data.
 
@@ -78,6 +82,8 @@ notebooks/<br>
 &emsp;&emsp;&emsp;├── in/<br>
 &emsp;&emsp;&emsp;&emsp; ├── geo/<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── census_tracts.parquet<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;  ├── city_council_districts.parquet<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;  ├── county_council_districts.parquet<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── flood_zones.parquet<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── market_value.parquet<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── parcels.parquet<br>
