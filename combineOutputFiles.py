@@ -34,7 +34,7 @@ for x in model_groups:
     prediction_data_ensemble_regression = pd.read_csv(openavmkit_output_folder + "/" + x + "/main/mra/pred_universe.csv")
     for i, row in prediction_data_ensemble_regression.iterrows():
         regression_predictions[row['key']] = row['prediction']
-    universe = pd.read_csv(openavmkit_output_folder + "/" + x + "/main/mra/universe.csv", usecols=['key','spatial_lag_sale_price_time_adj','spatial_lag_sale_price_time_adj_confidence','spatial_lag_sale_price_time_adj_vacant','spatial_lag_sale_price_time_adj_vacant_confidence','spatial_lag_sale_price_time_adj_land_sqft','spatial_lag_sale_price_time_adj_land_sqft_confidence','spatial_lag_sale_price_time_adj_impr_sqft','spatial_lag_sale_price_time_adj_impr_sqft_confidence','spatial_lag_floor_area_ratio','spatial_lag_bedroom_density','spatial_lag_bldg_age_years','spatial_lag_bldg_area_finished_sqft','spatial_lag_land_area_sqft','spatial_lag_bldg_quality_num','spatial_lag_bldg_condition_num'])
+    universe = pd.read_csv(openavmkit_output_folder + "/" + x + "/main/mra/universe.csv", usecols=['key','spatial_lag_sale_price_time_adj','spatial_lag_sale_price_time_adj_confidence','spatial_lag_sale_price_time_adj_vacant','spatial_lag_sale_price_time_adj_vacant_confidence','spatial_lag_sale_price_time_adj_land_sqft','spatial_lag_sale_price_time_adj_land_sqft_confidence','spatial_lag_sale_price_time_adj_impr_sqft','spatial_lag_sale_price_time_adj_impr_sqft_confidence','spatial_lag_floor_area_ratio','spatial_lag_bedroom_density','spatial_lag_bldg_age_years','spatial_lag_bldg_area_finished_sqft','spatial_lag_land_area_sqft','spatial_lag_bldg_quality_num','spatial_lag_bldg_condition_num','city_council_district','county_council_district'])
     universe_data = pd.concat([universe_data, universe])
 
 universe_data.rename(columns={'key': 'PARID'}, inplace=True)
@@ -47,6 +47,7 @@ parcel_data['regression_land_prediction'] = parcel_data['PARID'].map(land_predic
 parcel_data.rename(columns={'FAIRMARKETLAND': 'assessed_land'}, inplace=True)
 parcel_data.rename(columns={'FAIRMARKETTOTAL': 'assessed_total'}, inplace=True)
 parcel_data.rename(columns={'FINISHEDLIVINGAREA': 'building_area'}, inplace=True)
+parcel_data.rename(columns={'SCHOOLDESC': 'school_district'}, inplace=True)
 parcel_data['total_prediction'] = parcel_data['total_prediction'].astype(float)
 parcel_data['land_prediction'] = parcel_data['land_prediction'].astype(float)
 parcel_data['regression_prediction'] = parcel_data['regression_prediction'].astype(float)
@@ -56,26 +57,35 @@ parcel_data['assessed_total'] = parcel_data['assessed_total'].astype(float)
 parcel_data['building_area'] = parcel_data['building_area'].astype(float)
 
 parcel_data['OWNER_OCCUPIED'] = pd.Series(dtype='string')
+parcel_data['municipality'] = pd.Series(dtype='string')
 parcel_data['YEARS_SINCE_SALE'] = pd.Series(dtype='float64')
 parcel_data['ASSESSMENT_RATIO'] = pd.Series(dtype='float64')
 parcel_data['NEW_SALES_RATIO'] = pd.Series(dtype='float64')
 parcel_data['OLD_SALES_RATIO'] = pd.Series(dtype='float64')
+total_existing_residential_assessment = parcel_data.loc[parcel_data['CLASS'] == 'R', 'assessed_total'].sum()
+total_new_residential_assessment = parcel_data.loc[parcel_data['CLASS'] == 'R', 'total_prediction'].sum()
+total_residential_assessment_ratio = total_new_residential_assessment / total_existing_residential_assessment
+print('total_residential_assessment_ratio is', total_residential_assessment_ratio)
 for i, row in parcel_data.iterrows():
+    muni = row['MUNIDESC'].replace("  ", " ")
+    if "Ward - " in muni:
+        muni = muni.split("Ward - ")[1]
+    parcel_data.at[i, 'municipality'] = muni
     parcel_data.at[i, 'OWNER_OCCUPIED'] = 'N'
     if isinstance(row['SALEDATE'], str):
         sale_date = datetime.strptime(row['SALEDATE'], "%m-%d-%Y")
         updated_date = datetime.strptime(row['ASOFDATE'], "%d-%b-%y")
         ownership_time = updated_date - sale_date
-        if row['assessed_total'] > 0 and row['total_prediction'] > 0:
-            parcel_data.at[i, 'ASSESSMENT_RATIO'] = (row['total_prediction'] / (row['assessed_total'] / 0.527))
-        if row['SALEDESC'] == 'VALID SALE' and sale_date.year >= 2024 and row['total_prediction'] > 0 and row['SALEPRICE'] > 0:
-            parcel_data.at[i, 'NEW_SALES_RATIO'] = (row['total_prediction'] / (row['SALEPRICE']))
-            parcel_data.at[i, 'OLD_SALES_RATIO'] = ((row['assessed_total'] / 0.527) / (row['SALEPRICE']))
         parcel_data.at[i, 'YEARS_SINCE_SALE'] = ownership_time.total_seconds() / (365 * 24 * 60 * 60)
-    if row['CLASS'] == 'R':
-        full_address = str(row['PROPERTYHOUSENUM']) + str(row['PROPERTYFRACTION']) + str(row['PROPERTYADDRESS']) + str(row['PROPERTYUNIT'])
-        if full_address.replace(" ", "") == row['CHANGENOTICEADDRESS1'].replace(" ", ""):
-            parcel_data.at[i, 'OWNER_OCCUPIED'] = 'Y'
+        if row['CLASS'] == 'R':
+            full_address = str(row['PROPERTYHOUSENUM']) + str(row['PROPERTYFRACTION']) + str(row['PROPERTYADDRESS']) + str(row['PROPERTYUNIT'])
+            if full_address.replace(" ", "") == row['CHANGENOTICEADDRESS1'].replace(" ", ""):
+                parcel_data.at[i, 'OWNER_OCCUPIED'] = 'Y'
+            if row['assessed_total'] > 0 and row['total_prediction'] > 0:
+                parcel_data.at[i, 'ASSESSMENT_RATIO'] = (row['total_prediction'] / (row['assessed_total'] * total_residential_assessment_ratio))
+            if row['SALEDESC'] == 'VALID SALE' and sale_date.year >= 2024 and row['total_prediction'] > 0 and row['SALEPRICE'] > 0:
+                parcel_data.at[i, 'NEW_SALES_RATIO'] = (row['total_prediction'] / (row['SALEPRICE']))
+                parcel_data.at[i, 'OLD_SALES_RATIO'] = ((row['assessed_total'] * total_residential_assessment_ratio) / (row['SALEPRICE']))
 
 parcel_geometry.rename(columns={'PIN': 'PARCEL_ID'}, inplace=True)
 parcel_data['land_area_sqft'] = parcel_data['PARID'].map(land_areas)
@@ -110,10 +120,26 @@ parcel_data['neighborhood_lycd_land_prediction'] = parcel_data['land_area_sqft']
 assessment_ratios = parcel_data[(parcel_data['ASSESSMENT_RATIO'] > 0) | (parcel_data['ASSESSMENT_RATIO'] < 0)]
 neighborhood_assessment_ratios = assessment_ratios.groupby(['NEIGHCODE'])['ASSESSMENT_RATIO'].median().reset_index()
 neighborhood_assessment_ratios.rename(columns={'ASSESSMENT_RATIO': 'neighborhood_assessment_ratio'}, inplace=True)
+parcel_data = parcel_data.merge(neighborhood_assessment_ratios, how='left', left_on=['NEIGHCODE'], right_on=['NEIGHCODE'])
 census_tract_assessment_ratios = assessment_ratios.groupby(['census_tract'])['ASSESSMENT_RATIO'].median().reset_index()
 census_tract_assessment_ratios.rename(columns={'ASSESSMENT_RATIO': 'census_tract_assessment_ratio'}, inplace=True)
-parcel_data = parcel_data.merge(neighborhood_assessment_ratios, how='left', left_on=['NEIGHCODE'], right_on=['NEIGHCODE'])
 parcel_data = parcel_data.merge(census_tract_assessment_ratios, how='left', left_on=['census_tract'], right_on=['census_tract'])
+school_district_assessment_ratios = assessment_ratios.groupby(['school_district'])['ASSESSMENT_RATIO'].median().reset_index()
+school_district_assessment_ratios.rename(columns={'ASSESSMENT_RATIO': 'school_district_assessment_ratio'}, inplace=True)
+parcel_data = parcel_data.merge(school_district_assessment_ratios, how='left', left_on=['school_district'], right_on=['school_district'])
+school_district_assessment_ratios.to_csv("school_district_assessment_ratios.csv", index=False)
+municipality_assessment_ratios = assessment_ratios.groupby(['municipality'])['ASSESSMENT_RATIO'].median().reset_index()
+municipality_assessment_ratios.rename(columns={'ASSESSMENT_RATIO': 'municipality_assessment_ratio'}, inplace=True)
+parcel_data = parcel_data.merge(municipality_assessment_ratios, how='left', left_on=['municipality'], right_on=['municipality'])
+municipality_assessment_ratios.to_csv("municipality_assessment_ratios.csv", index=False)
+city_council_district_assessment_ratios = assessment_ratios.groupby(['city_council_district'])['ASSESSMENT_RATIO'].median().reset_index()
+city_council_district_assessment_ratios.rename(columns={'ASSESSMENT_RATIO': 'city_council_district_assessment_ratio'}, inplace=True)
+parcel_data = parcel_data.merge(city_council_district_assessment_ratios, how='left', left_on=['city_council_district'], right_on=['city_council_district'])
+city_council_district_assessment_ratios.to_csv("city_council_district_assessment_ratios.csv", index=False)
+county_council_district_assessment_ratios = assessment_ratios.groupby(['county_council_district'])['ASSESSMENT_RATIO'].median().reset_index()
+county_council_district_assessment_ratios.rename(columns={'ASSESSMENT_RATIO': 'county_council_district_assessment_ratio'}, inplace=True)
+parcel_data = parcel_data.merge(county_council_district_assessment_ratios, how='left', left_on=['county_council_district'], right_on=['county_council_district'])
+county_council_district_assessment_ratios.to_csv("county_council_district_assessment_ratios.csv", index=False)
 
 old_sales_ratios = parcel_data[(parcel_data['OLD_SALES_RATIO'] > 0) | (parcel_data['OLD_SALES_RATIO'] < 0)]
 neighborhood_old_sales_ratios = old_sales_ratios.groupby(['NEIGHCODE'])['OLD_SALES_RATIO'].median().reset_index()
