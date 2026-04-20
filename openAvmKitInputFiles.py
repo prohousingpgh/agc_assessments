@@ -102,10 +102,21 @@ parcel_geometry_distance = parcel_geometry.to_crs('EPSG:3857')
 parcel_geometry_area = parcel_geometry.to_crs('EPSG:6933')
 parcel_geometry_area['PARCEL_AREA'] = parcel_geometry_area.geometry.area * 10.76391
 commercial_rents_gdf = commercial_rents_gdf.to_crs('EPSG:3857')
+census_tracts = census_tracts.to_crs('EPSG:3857')
+
+# Census tract calculation - first check if parcel is entirely within a census tract. If it's not, take the nearest census tract.
+parcel_geometry_distance = gpd.sjoin(parcel_geometry_distance, census_tracts, how='left', predicate='within', rsuffix='_within')
+parcel_geometry_distance.rename(columns={'CENSUS_TRACT': 'CENSUS_TRACT_WITHIN'}, inplace=True)
+parcel_geometry_distance['centroid'] = parcel_geometry_distance.geometry.centroid
+parcel_geometry_distance.set_geometry('centroid', inplace=True)
+parcel_geometry_distance = gpd.sjoin_nearest(parcel_geometry_distance, census_tracts, how='left', rsuffix='_nearest')
+parcel_geometry_distance.rename(columns={'CENSUS_TRACT': 'CENSUS_TRACT_NEAREST'}, inplace=True)
+parcel_geometry_distance.set_geometry('geometry', inplace=True)
 
 parcel_geometry_calculations = pd.merge(parcel_geometry_area, parcel_geometry_distance, on='PARCEL_ID', suffixes=('_area', '_distance'))
 parcel_data = pd.merge(parcel_data, parcel_geometry_calculations, how='left', on='PARCEL_ID')
 parcel_data = pd.merge(parcel_data, crexi_data, how='left', on='PARCEL_ID')
+parcel_data = parcel_data.assign(CENSUS_TRACT=parcel_data.CENSUS_TRACT_WITHIN.fillna(parcel_data.CENSUS_TRACT_NEAREST))
 count = 0
 for i, row in parcel_data.iterrows():
     count += 1
@@ -135,15 +146,13 @@ for i, row in parcel_data.iterrows():
 
 pd.set_option('display.max_columns', None)
 print(parcel_data.head())
-print(census_tracts.head())
 print(sales_data.head())
 print(parcel_geometry.head())
 print(market_value.head())
 
-parcel_data.to_csv("parcels.csv", index=False, columns=["PARCEL_ID", "ADDRESS", "PROPERTYCITY", "PROPERTYSTATE", "PROPERTYZIP", "MUNICIPALITY", "SCHOOL", "LEGAL", "NEIGHBORHOOD", "TAXCODE", "TAXSUBCODE", "OWNER", "CLASS", "USE", "LOTAREA", "HOMESTEADFLAG", "FARMSTEADFLAG", "CLEANGREEN", "ABATEMENTFLAG", "COUNTYBUILDING", "COUNTYLAND", "COUNTYTOTAL", "COUNTYEXEMPTBLDG", "LOCALBUILDING", "LOCALLAND", "LOCALTOTAL", "FAIRMARKETBUILDING", "FAIRMARKETLAND", "FAIRMARKETTOTAL", "STYLE", "STORIES", "YEARBLT", "EXTERIORFINISH", "ROOF", "BASEMENT", "GRADE", "GRADENUM", "CONDITION", "CONDITIONNUM", "CDU", "TOTALROOMS", "BEDROOMS", "FULLBATHS", "HALFBATHS", "HEATINGCOOLING", "FIREPLACES", "BSMTGARAGE", "FINISHEDLIVINGAREA", "CARDNUMBER", "ALT_ID", "FINISHEDAREA", "COMMERCIALRENT", "PARCEL_AREA", "PARCEL_ID", "ADDRESS_COUNT", "BUILDING_COUNT", "UNIT_COUNT", "BUILDING_FOOTPRINT", "BUILDING_AREA", "DESCRIPTION", "TYPE", "IS_PITTSBURGH_SD"])
+parcel_data.to_csv("parcels.csv", index=False, columns=["PARCEL_ID", "ADDRESS", "PROPERTYCITY", "PROPERTYSTATE", "PROPERTYZIP", "MUNICIPALITY", "SCHOOL", "LEGAL", "NEIGHBORHOOD", "TAXCODE", "TAXSUBCODE", "OWNER", "CLASS", "USE", "LOTAREA", "HOMESTEADFLAG", "FARMSTEADFLAG", "CLEANGREEN", "ABATEMENTFLAG", "COUNTYBUILDING", "COUNTYLAND", "COUNTYTOTAL", "COUNTYEXEMPTBLDG", "LOCALBUILDING", "LOCALLAND", "LOCALTOTAL", "FAIRMARKETBUILDING", "FAIRMARKETLAND", "FAIRMARKETTOTAL", "STYLE", "STORIES", "YEARBLT", "EXTERIORFINISH", "ROOF", "BASEMENT", "GRADE", "GRADENUM", "CONDITION", "CONDITIONNUM", "CDU", "TOTALROOMS", "BEDROOMS", "FULLBATHS", "HALFBATHS", "HEATINGCOOLING", "FIREPLACES", "BSMTGARAGE", "FINISHEDLIVINGAREA", "CARDNUMBER", "ALT_ID", "FINISHEDAREA", "COMMERCIALRENT", "PARCEL_AREA", "PARCEL_ID", "ADDRESS_COUNT", "BUILDING_COUNT", "UNIT_COUNT", "BUILDING_FOOTPRINT", "BUILDING_AREA", "DESCRIPTION", "TYPE", "IS_PITTSBURGH_SD", "CENSUS_TRACT_NEAREST", "CENSUS_TRACT_WITHIN", "CENSUS_TRACT"])
 sales_data.to_csv("sales.csv", index=False, columns=["PARCEL_ID", "RECORDDATE", "SALEDATE", "SALEPRICE", "SALECODE", "DEEDBOOK", "DEEDPAGE", "CHANGENOTICEADDRESS1", "CHANGENOTICEADDRESS2", "CHANGENOTICEADDRESS3", "CHANGENOTICEADDRESS4", "USE", "SALEYEAR", "CLASS", "FINISHEDAREA"])
 parcel_geometry.to_parquet('parcels.parquet')
-census_tracts.to_parquet('census_tracts.parquet')
 market_value.to_parquet('market_value.parquet')
 
 city_boundary = city_boundary.to_crs(epsg=4326)
