@@ -97,27 +97,38 @@ parcel_data['land_ratio'] = parcel_data['assessed_land'] / parcel_data['assessed
 # Simple land valuation algorithm - https://progressandpoverty.substack.com/p/valuing-land-the-simplest-viable
 all_census_tracts = parcel_data.groupby(['census_tract'])['PARID'].agg(parcel_count='count')
 all_census_tracts = census_tract_geometry.merge(all_census_tracts, on='census_tract')
-median_assessments = parcel_data[parcel_data['CLASS'] == 'R'].groupby(['census_tract'])['total_prediction'].agg(total_prediction='median', residential_parcel_count='count')
-median_lot_sizes = parcel_data[parcel_data['CLASS'] == 'R'].groupby(['census_tract'])['land_area_sqft'].median().reset_index()
+median_assessments = parcel_data[parcel_data['CLASS'] == 'R'].groupby(['census_tract'])['total_prediction'].agg(total_prediction_median='median', residential_parcel_count='count')
+median_lot_sizes = parcel_data[parcel_data['CLASS'] == 'R'].groupby(['census_tract'])['land_area_sqft'].agg(land_area_sqft_median='median')
+mean_assessments = parcel_data[parcel_data['CLASS'] == 'R'].groupby(['census_tract'])['total_prediction'].agg(total_prediction_mean='mean')
+mean_lot_sizes = parcel_data[parcel_data['CLASS'] == 'R'].groupby(['census_tract'])['land_area_sqft'].agg(land_area_sqft_mean='mean')
 land_ratios = parcel_data[parcel_data['LOTAREA'] > 0].groupby(['census_tract'])['land_ratio'].median().reset_index()
 median_assessments = all_census_tracts.merge(median_assessments, how='left', left_on=['census_tract'], right_on=['census_tract'])
 price_per_sqft = median_assessments.merge(median_lot_sizes, how='left', left_on=['census_tract'], right_on=['census_tract'])
-price_per_sqft['census_tract_total_price_per_sqft'] = price_per_sqft['total_prediction'] / price_per_sqft['land_area_sqft']
+price_per_sqft = price_per_sqft.merge(mean_assessments, how='left', left_on=['census_tract'], right_on=['census_tract'])
+price_per_sqft = price_per_sqft.merge(mean_lot_sizes, how='left', left_on=['census_tract'], right_on=['census_tract'])
+price_per_sqft['census_tract_total_price_per_sqft_median'] = price_per_sqft['total_prediction_median'] / price_per_sqft['land_area_sqft_median']
+price_per_sqft['census_tract_total_price_per_sqft_mean'] = price_per_sqft['total_prediction_mean'] / price_per_sqft['land_area_sqft_mean']
 census_tract_land_price_per_sqft = price_per_sqft.merge(land_ratios, how='left', left_on=['census_tract'], right_on=['census_tract'])
 census_tract_land_price_per_sqft.rename(columns={'land_ratio': 'census_tract_land_percentage'}, inplace=True)
-census_tract_land_price_per_sqft['census_tract_land_price_per_sqft_temp'] = census_tract_land_price_per_sqft['census_tract_total_price_per_sqft'] * census_tract_land_price_per_sqft['census_tract_land_percentage']
+census_tract_land_price_per_sqft['census_tract_land_price_per_sqft_temp_median'] = census_tract_land_price_per_sqft['census_tract_total_price_per_sqft_median'] * census_tract_land_price_per_sqft['census_tract_land_percentage']
+census_tract_land_price_per_sqft['census_tract_land_price_per_sqft_temp_mean'] = census_tract_land_price_per_sqft['census_tract_total_price_per_sqft_mean'] * census_tract_land_price_per_sqft['census_tract_land_percentage']
 # For tracts with less than 10 residential parcels, use values from a different nearby tract instead
 census_tract_land_price_per_sqft['centroid'] = census_tract_land_price_per_sqft.geometry.centroid
 census_tract_land_price_per_sqft.set_geometry('centroid', inplace=True)
 census_tract_land_price_per_sqft.drop(columns='geometry', inplace=True)
-census_tract_land_price_per_sqft_valid = census_tract_land_price_per_sqft[census_tract_land_price_per_sqft['residential_parcel_count'] > 10][['census_tract', 'centroid', 'census_tract_land_price_per_sqft_temp']]
+census_tract_land_price_per_sqft_valid = census_tract_land_price_per_sqft[census_tract_land_price_per_sqft['residential_parcel_count'] > 10][['census_tract', 'centroid', 'census_tract_land_price_per_sqft_temp_median', 'census_tract_land_price_per_sqft_temp_mean']]
 census_tract_land_price_per_sqft_valid.rename(columns={'census_tract': 'nearest_valid_census_tract'}, inplace=True)
-census_tract_land_price_per_sqft_valid.rename(columns={'census_tract_land_price_per_sqft_temp': 'census_tract_land_price_per_sqft'}, inplace=True)
+census_tract_land_price_per_sqft_valid.rename(columns={'census_tract_land_price_per_sqft_temp_median': 'census_tract_land_price_per_sqft_median'}, inplace=True)
+census_tract_land_price_per_sqft_valid.rename(columns={'census_tract_land_price_per_sqft_temp_mean': 'census_tract_land_price_per_sqft_mean'}, inplace=True)
 census_tract_land_price_per_sqft = gpd.sjoin_nearest(census_tract_land_price_per_sqft, census_tract_land_price_per_sqft_valid, how='left', rsuffix='nearest')
 census_tract_land_price_per_sqft.to_csv('census_tract_land_price_per_sqft.csv', index=False)
-census_tract_land_price_per_sqft = census_tract_land_price_per_sqft[['census_tract','census_tract_total_price_per_sqft','census_tract_land_percentage','census_tract_land_price_per_sqft']]
+census_tract_land_price_per_sqft = census_tract_land_price_per_sqft[['census_tract','census_tract_total_price_per_sqft_median','census_tract_total_price_per_sqft_mean','census_tract_land_percentage','census_tract_land_price_per_sqft_median','census_tract_land_price_per_sqft_mean']]
 parcel_data = parcel_data.merge(census_tract_land_price_per_sqft, how='left', left_on=['census_tract'], right_on=['census_tract'])
-parcel_data['census_tract_lycd_land_prediction'] = parcel_data['land_area_sqft'] * parcel_data['census_tract_land_price_per_sqft']
+parcel_data['census_tract_lycd_land_prediction_median'] = parcel_data['land_area_sqft'] * parcel_data['census_tract_land_price_per_sqft_median']
+parcel_data['census_tract_lycd_land_prediction_mean'] = parcel_data['land_area_sqft'] * parcel_data['census_tract_land_price_per_sqft_mean']
+
+# Land price per sqft under current assessment, scaled for comparison with new assessments
+parcel_data['current_land_price_per_sqft_adjusted'] = (parcel_data['assessed_land'] / parcel_data['land_area_sqft']) * total_residential_assessment_ratio
 
 assessment_ratios = parcel_data[(parcel_data['ASSESSMENT_RATIO'] > 0) | (parcel_data['ASSESSMENT_RATIO'] < 0)]
 neighborhood_assessment_ratios = assessment_ratios.groupby(['NEIGHCODE'])['ASSESSMENT_RATIO'].median().reset_index()
@@ -164,3 +175,5 @@ parcel_geometry_assessments = parcel_geometry_assessments.merge(parcel_data, lef
 
 parcel_data.to_csv("predictions.csv", index=False)
 parcel_geometry_assessments.to_parquet('predictions.parquet')
+
+parcel_data[parcel_data['CLASS'] == 'R'].to_csv("residential_predictions.csv", header=['PARCEL_ID', 'USE_DESCRIPTION', 'LAND_AREA_SQFT', 'CURRENT_ASSESSMENT_LAND', 'CURRENT_ASSESSMENT_TOTAL', 'NEW_ASSESSMENT_LAND', 'NEW_ASSESSMENT_TOTAL'], columns=['PARID', 'USEDESC', 'land_area_sqft', 'assessed_land', 'assessed_total', 'census_tract_lycd_land_prediction_mean', 'total_prediction'], index=False)

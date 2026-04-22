@@ -113,7 +113,7 @@
 						], "str:---"
 					],
 					"__comment": "valid_sale is an important field. It will be set to 'true' only for typical sales, and false for multi-parcel sales, love and affection sales, etc. For modeling purposes, we will only use valid sales, since other sales may or may not reflect market rates.",
-					"valid_sale": ["?", ["==", "SALECODE", "str:0 VALID SALE"]],
+					"valid_sale": ["?", [">", "SALEPRICE", 10000]],
 					"vacant_sale": ["?", ["isin", "use", ["098 CONDEMNED/BOARDED-UP", "099 RES AUX BUILDING (NO HOUSE)", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]]]
 				}
 			},
