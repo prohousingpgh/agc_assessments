@@ -71,11 +71,9 @@
 					"alt_id": ["ALT_ID", "string"],
 					"bldg_area_finished_sqft": ["FINISHEDAREA", "float"],
 					"commercial_rent": ["COMMERCIALRENT", "float"],
-					"address_count": ["ADDRESS_COUNT", "float"],
 					"building_count": ["BUILDING_COUNT", "float"],
-					"unit_count": ["UNIT_COUNT", "float"],
 					"building_footprint": ["BUILDING_FOOTPRINT", "float"],
-					"building_area": ["BUILDING_AREA", "float"],
+					"building_height": ["BUILDING_HEIGHT", "float"],
 					"is_pittsburgh_sd": ["IS_PITTSBURGH_SD", "float"],
 					"census_tract": ["CENSUS_TRACT", "string"]
 				}
@@ -240,6 +238,9 @@
 					"vacant_sale"
 				],
 				"zero": [
+					"building_count",
+					"building_footprint",
+					"building_height"
 				],
 				"none": [
 					"homestead_flag",
@@ -277,12 +278,7 @@
 				],
 				"median": [
 					"bldg_quality_num",
-					"bldg_condition_num",
-					"address_count",
-					"building_count",
-					"unit_count",
-					"building_footprint",
-					"building_area"
+					"bldg_condition_num"
 				],
 				"zero_impr": [
 					"lot_area",
@@ -345,11 +341,9 @@
 				"bldg_quality_num",
 				"bldg_condition_num",
 				"commercial_rent",
-				"address_count",
 				"building_count",
-				"unit_count",
 				"building_footprint",
-				"building_area",
+				"building_height",
 				"market_value_category",
 				"spatial_lag_bedroom_density",
 				"spatial_lag_bldg_age_years",
@@ -442,6 +436,8 @@
 						"bldg_condition_num",
 						"commercial_rent",
 						"building_footprint",
+						"building_count",
+						"building_height",
 						"spatial_lag_sale_price_time_adj"
 					]
 				}
@@ -456,6 +452,8 @@
 						"bldg_condition_num",
 						"commercial_rent",
 						"building_footprint",
+						"building_count",
+						"building_height",
 						"spatial_lag_sale_price_time_adj"
 					]
 				}
@@ -557,11 +555,9 @@
 				"finished_living_area_sqft",
 				"bldg_quality_num",
 				"bldg_condition_num",
-				"address_count",
 				"building_count",
-				"unit_count",
 				"building_footprint",
-				"building_area"
+				"building_height"
 			],
 			"categorical": [
 				"basement_desc",

@@ -13,7 +13,10 @@ Undermined overlay: https://data.wprdc.org/dataset/undermined-areas<br>
 Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
 City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
 County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
-Note that the steep slopes, flood zone, and undermined overlays are for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis.<br>
+Note that the steep slopes, flood zone, and undermined overlays are for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis.
+
+Building heights and footprints: https://public.tableau.com/views/GlobalMLBuildingFootprintsDataWithEstimatedHeight/GlobalMLBuildingFootprints.<br>
+You may need to download a few files to get all of Allegheny County. Unzip these files and put the raw csvs under agc_assessments/building_footprints.
 
 Run this script, which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
 python getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson
