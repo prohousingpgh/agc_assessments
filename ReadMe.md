@@ -13,6 +13,8 @@ Undermined overlay: https://data.wprdc.org/dataset/undermined-areas<br>
 Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
 City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
 County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
+Census block boundaries: https://data.wprdc.org/dataset/allegheny-county-census-blocks-2021<br>
+Jobs by census block: https://lehd.ces.census.gov/data/#lodes<br>
 Note that the steep slopes, flood zone, and undermined overlays are for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis.
 
 Building heights and footprints: https://public.tableau.com/views/GlobalMLBuildingFootprintsDataWithEstimatedHeight/GlobalMLBuildingFootprints.<br>
@@ -25,7 +27,7 @@ Get commercial parcel data by extracting json responses from the search page of 
 python processCrexiData.py
 
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
-python OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson slopes.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv city_council_districts_2022.geojson County_Council_Districts_-7561056125954294637.geojson
+python OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson slopes.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv city_council_districts_2022.geojson County_Council_Districts_-7561056125954294637.geojson census_blocks_2020.geojson pa_wac_S000_JT00_2023.csv
 
 This should generate 9 files:<br>
 parcels.csv<br>

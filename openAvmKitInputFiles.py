@@ -53,6 +53,8 @@ city_boundary = gpd.read_file(sys.argv[9])
 crexi_data = gpd.read_file(sys.argv[10])
 city_council_districts = gpd.read_file(sys.argv[11])
 county_council_districts = gpd.read_file(sys.argv[12])
+census_blocks = gpd.read_file(sys.argv[13])
+jobs_per_block = pd.read_csv(sys.argv[14], dtype={'w_geocode': str, 'C000': float})
 
 parcel_data.rename(columns={'PARID': 'PARCEL_ID'}, inplace=True)
 parcel_geometry.rename(columns={'PIN': 'PARCEL_ID'}, inplace=True)
@@ -63,6 +65,9 @@ flood_zones.rename(columns={'fld_zone': 'FLOOD_ZONE'}, inplace=True)
 undermined.rename(columns={'undermined': 'UNDERMINED'}, inplace=True)
 city_council_districts.rename(columns={'DIST_NAME': 'CITY_COUNCIL_DISTRICT'}, inplace=True)
 county_council_districts.rename(columns={'LABEL': 'COUNTY_COUNCIL_DISTRICT'}, inplace=True)
+census_blocks.rename(columns={'GEOID20': 'CENSUS_BLOCK'}, inplace=True)
+jobs_per_block.rename(columns={'w_geocode': 'CENSUS_BLOCK'}, inplace=True)
+jobs_per_block.rename(columns={'C000': 'CENSUS_BLOCK_JOB_COUNT'}, inplace=True)
 
 commercial_rents_gdf = gpd.GeoDataFrame(
     commercial_rents, geometry=gpd.points_from_xy(commercial_rents['LONGITUDE'], commercial_rents['LATITUDE']), crs="EPSG:4326"
@@ -133,6 +138,20 @@ parcel_geometry_distance['centroid'] = parcel_geometry_distance.geometry.centroi
 parcel_geometry_distance.set_geometry('centroid', inplace=True)
 parcel_geometry_distance = gpd.sjoin_nearest(parcel_geometry_distance, census_tracts, how='left', rsuffix='_nearest')
 parcel_geometry_distance.rename(columns={'CENSUS_TRACT': 'CENSUS_TRACT_NEAREST'}, inplace=True)
+
+# Get jobs/square foot for each parcel (using average across any census block within 500 meters
+census_blocks = pd.merge(census_blocks, jobs_per_block, how='left', on='CENSUS_BLOCK')
+census_blocks['CENSUS_BLOCK_JOB_COUNT'] = census_blocks['CENSUS_BLOCK_JOB_COUNT'].fillna(0)
+census_blocks = census_blocks.to_crs('EPSG:6933')
+census_blocks['CENSUS_BLOCK_AREA'] = census_blocks.geometry.area * 10.76391
+census_blocks['CENSUS_BLOCK_JOBS_PER_SQFT'] = census_blocks['CENSUS_BLOCK_JOB_COUNT'] / census_blocks['CENSUS_BLOCK_AREA']
+census_blocks = census_blocks.to_crs('EPSG:3857')
+parcel_geometry_distance['geometry_circle'] = parcel_geometry_distance['centroid'].buffer(500)
+parcel_geometry_distance.set_geometry('geometry_circle', inplace=True)
+nearby_blocks = gpd.sjoin(parcel_geometry_distance, census_blocks, how='left', rsuffix='_block')
+nearby_blocks = nearby_blocks.groupby(['PARCEL_ID']).agg(JOBS_PER_SQFT=('CENSUS_BLOCK_JOBS_PER_SQFT', 'mean'), JOINED_BLOCKS=('CENSUS_BLOCK_JOBS_PER_SQFT', 'count'))
+parcel_geometry_distance = parcel_geometry_distance.merge(nearby_blocks, how='left', on='PARCEL_ID')
+
 parcel_geometry_distance.set_geometry('geometry', inplace=True)
 
 parcel_geometry_calculations = pd.merge(parcel_geometry_area, parcel_geometry_distance, on='PARCEL_ID', suffixes=('_area', '_distance'))
@@ -168,7 +187,7 @@ print(sales_data.head())
 print(parcel_geometry.head())
 print(market_value.head())
 
-parcel_data.to_csv("parcels.csv", index=False, columns=["PARCEL_ID", "ADDRESS", "PROPERTYCITY", "PROPERTYSTATE", "PROPERTYZIP", "MUNICIPALITY", "SCHOOL", "LEGAL", "NEIGHBORHOOD", "TAXCODE", "TAXSUBCODE", "OWNER", "CLASS", "USE", "LOTAREA", "HOMESTEADFLAG", "FARMSTEADFLAG", "CLEANGREEN", "ABATEMENTFLAG", "COUNTYBUILDING", "COUNTYLAND", "COUNTYTOTAL", "COUNTYEXEMPTBLDG", "LOCALBUILDING", "LOCALLAND", "LOCALTOTAL", "FAIRMARKETBUILDING", "FAIRMARKETLAND", "FAIRMARKETTOTAL", "STYLE", "STORIES", "YEARBLT", "EXTERIORFINISH", "ROOF", "BASEMENT", "GRADE", "GRADENUM", "CONDITION", "CONDITIONNUM", "CDU", "TOTALROOMS", "BEDROOMS", "FULLBATHS", "HALFBATHS", "HEATINGCOOLING", "FIREPLACES", "BSMTGARAGE", "FINISHEDLIVINGAREA", "CARDNUMBER", "ALT_ID", "FINISHEDAREA", "COMMERCIALRENT", "PARCEL_AREA", "PARCEL_ID", "BUILDING_COUNT", "BUILDING_FOOTPRINT", "BUILDING_HEIGHT", "IS_PITTSBURGH_SD", "CENSUS_TRACT_NEAREST", "CENSUS_TRACT_WITHIN", "CENSUS_TRACT"])
+parcel_data.to_csv("parcels.csv", index=False, columns=["PARCEL_ID", "ADDRESS", "PROPERTYCITY", "PROPERTYSTATE", "PROPERTYZIP", "MUNICIPALITY", "SCHOOL", "LEGAL", "NEIGHBORHOOD", "TAXCODE", "TAXSUBCODE", "OWNER", "CLASS", "USE", "LOTAREA", "HOMESTEADFLAG", "FARMSTEADFLAG", "CLEANGREEN", "ABATEMENTFLAG", "COUNTYBUILDING", "COUNTYLAND", "COUNTYTOTAL", "COUNTYEXEMPTBLDG", "LOCALBUILDING", "LOCALLAND", "LOCALTOTAL", "FAIRMARKETBUILDING", "FAIRMARKETLAND", "FAIRMARKETTOTAL", "STYLE", "STORIES", "YEARBLT", "EXTERIORFINISH", "ROOF", "BASEMENT", "GRADE", "GRADENUM", "CONDITION", "CONDITIONNUM", "CDU", "TOTALROOMS", "BEDROOMS", "FULLBATHS", "HALFBATHS", "HEATINGCOOLING", "FIREPLACES", "BSMTGARAGE", "FINISHEDLIVINGAREA", "CARDNUMBER", "ALT_ID", "FINISHEDAREA", "COMMERCIALRENT", "PARCEL_AREA", "PARCEL_ID", "BUILDING_COUNT", "BUILDING_FOOTPRINT", "BUILDING_HEIGHT", "IS_PITTSBURGH_SD", "CENSUS_TRACT_NEAREST", "CENSUS_TRACT_WITHIN", "CENSUS_TRACT", "JOBS_PER_SQFT", "JOINED_BLOCKS"])
 sales_data.to_csv("sales.csv", index=False, columns=["PARCEL_ID", "RECORDDATE", "SALEDATE", "SALEPRICE", "SALECODE", "DEEDBOOK", "DEEDPAGE", "CHANGENOTICEADDRESS1", "CHANGENOTICEADDRESS2", "CHANGENOTICEADDRESS3", "CHANGENOTICEADDRESS4", "USE", "SALEYEAR", "CLASS", "FINISHEDAREA"])
 parcel_geometry.to_parquet('parcels.parquet')
 market_value.to_parquet('market_value.parquet')

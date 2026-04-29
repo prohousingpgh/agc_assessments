@@ -75,7 +75,8 @@
 					"building_footprint": ["BUILDING_FOOTPRINT", "float"],
 					"building_height": ["BUILDING_HEIGHT", "float"],
 					"is_pittsburgh_sd": ["IS_PITTSBURGH_SD", "float"],
-					"census_tract": ["CENSUS_TRACT", "string"]
+					"census_tract": ["CENSUS_TRACT", "string"],
+					"jobs_per_sqft": ["JOBS_PER_SQFT", "float"]
 				}
 			},
 			"sales": {
@@ -240,7 +241,8 @@
 				"zero": [
 					"building_count",
 					"building_footprint",
-					"building_height"
+					"building_height",
+					"jobs_per_sqft"
 				],
 				"none": [
 					"homestead_flag",
@@ -344,6 +346,7 @@
 				"building_count",
 				"building_footprint",
 				"building_height",
+				"jobs_per_sqft",
 				"market_value_category",
 				"spatial_lag_bedroom_density",
 				"spatial_lag_bldg_age_years",
@@ -438,6 +441,7 @@
 						"building_footprint",
 						"building_count",
 						"building_height",
+						"jobs_per_sqft",
 						"spatial_lag_sale_price_time_adj"
 					]
 				}
@@ -454,6 +458,7 @@
 						"building_footprint",
 						"building_count",
 						"building_height",
+						"jobs_per_sqft",
 						"spatial_lag_sale_price_time_adj"
 					]
 				}
@@ -463,6 +468,7 @@
 					"ind_vars": [
 						"land_area_sqft",
 						"commercial_rent",
+						"jobs_per_sqft",
 						"spatial_lag_sale_price_time_adj"
 					]
 				}
@@ -557,7 +563,8 @@
 				"bldg_condition_num",
 				"building_count",
 				"building_footprint",
-				"building_height"
+				"building_height",
+				"jobs_per_sqft"
 			],
 			"categorical": [
 				"basement_desc",
