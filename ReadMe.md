@@ -108,5 +108,5 @@ This allows users to perform all of the OpenAvmKit operations on the data.
 
 There is a set of Jupyter notebooks in OpenAvmKit that walk users through the process of generating assessments. Book 03-model.ipynb allows users to generate valuations.
 
-#Results
+# Results
 The Results of the aboves steps are uploaded to [...].
