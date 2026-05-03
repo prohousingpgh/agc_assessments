@@ -14,22 +14,22 @@ Allgheny County census tract GeoJSON: https://openac-alcogis.opendata.arcgis.com
 Allegheny County census block boundaries: https://data.wprdc.org/dataset/allegheny-county-census-blocks-2021<br>
 Allegheny County jobs by census block: https://lehd.ces.census.gov/data/#lodes<br>
 Building heights and footprints: https://public.tableau.com/views/GlobalMLBuildingFootprintsDataWithEstimatedHeight/GlobalMLBuildingFootprints.<br>
-For heights and footprints, users may need to download a few files to get all of Allegheny County. Unzip these files and put the raw csvs under agc_assessments/building_footprints.
+For heights and footprints, users may need to download a few files to get all of Allegheny County. Unzip these files and put the raw csvs under agc_assessments/building_footprints. <br>
 Run this script, which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
 python getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson
 
-The following data input files are used for the graphs in the report:
+The following data input files are used for the graphs in the report: <br>
 REPORT GRAPHS City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
 REPORT GRAPHS County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
 
-The following data input files are not currently used in our asssessment analysis, but may prove useful to other users:
+The following data input files are not currently used in our asssessment analysis, but may prove useful to other users: <br>
 Allgheny County market value categories: https://data.wprdc.org/dataset/market-value-analysis-2021<br>
 Pittsburgh Steep slopes overlay: https://data.wprdc.org/dataset/25-or-greater-slope<br>
 Pittsburgh Flood zones: https://data.wprdc.org/dataset/2014-fema-flood-zones<br>
 Pittsburgh Undermined overlay: https://data.wprdc.org/dataset/undermined-areas<br>
 Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
-Note that the steep slopes, flood zone, and undermined overlays are for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis.
-Commercial parcel data by extracting json responses from the search page of Crexi (https://www.crexi.com/search). These responses can be combined into a csv using this script:
+Note that the steep slopes, flood zone, and undermined overlays are for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis. <br>
+Commercial parcel data by extracting json responses from the search page of Crexi (https://www.crexi.com/search). These responses can be combined into a csv using this script: <br>
 python processCrexiData.py
 
 # Convert Data into Usuable Format
