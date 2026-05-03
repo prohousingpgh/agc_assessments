@@ -112,7 +112,7 @@
 						], "str:---"
 					],
 					"__comment": "valid_sale is an important field. It will be set to 'true' only for typical sales, and false for multi-parcel sales, love and affection sales, etc. For modeling purposes, we will only use valid sales, since other sales may or may not reflect market rates.",
-					"valid_sale": ["?", [">", "SALEPRICE", 10000]],
+					"valid_sale": ["?", ["==", "SALECODE", "str:0 VALID SALE"]],
 					"vacant_sale": ["?", ["isin", "use", ["098 CONDEMNED/BOARDED-UP", "099 RES AUX BUILDING (NO HOUSE)", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]]]
 				}
 			},
@@ -431,66 +431,78 @@
 			"__comment": "This is where we choose which variables to include when running the models. Note that most of the models evaluate each variable and will exclude any that aren't useful - so it's ok to include a lot of variables here, the models will select the useful ones automatically.",
 			"main": {
 				"commercial": {
-					"ind_vars": [
-						"land_area_sqft",
-						"commercial_rent",
-						"building_footprint",
-						"building_height",
-						"jobs_per_sqft",
-						"spatial_lag_sale_price_time_adj"
-					]
+					"default": {
+						"ind_vars": [
+							"land_area_sqft",
+							"commercial_rent",
+							"building_footprint",
+							"building_height",
+							"jobs_per_sqft",
+							"spatial_lag_sale_price_time_adj"
+						]
+					}
 				},
 				"residential_multi_family": {
-					"ind_vars": [
-						"land_area_sqft",
-						"bldg_year_built",
-						"finished_living_area_sqft",
-						"bldg_quality_num",
-						"bldg_condition_num",
-						"spatial_lag_sale_price_time_adj"
-					]
+					"default": {
+						"ind_vars": [
+							"land_area_sqft",
+							"bldg_year_built",
+							"finished_living_area_sqft",
+							"bldg_quality_num",
+							"bldg_condition_num",
+							"spatial_lag_sale_price_time_adj"
+						]
+					}
 				},
 				"residential_single_family": {
-					"ind_vars": [
-						"land_area_sqft",
-						"bldg_year_built",
-						"finished_living_area_sqft",
-						"bldg_quality_num",
-						"bldg_condition_num",
-						"spatial_lag_sale_price_time_adj"
-					]
+					"default": {
+						"ind_vars": [
+							"land_area_sqft",
+							"bldg_year_built",
+							"finished_living_area_sqft",
+							"bldg_quality_num",
+							"bldg_condition_num",
+							"spatial_lag_sale_price_time_adj"
+						]
+					}
 				}
 			},
 			"hedonic": {
 				"commercial": {
-					"ind_vars": [
-						"land_area_sqft",
-						"commercial_rent",
-						"building_footprint",
-						"building_height",
-						"jobs_per_sqft",
-						"spatial_lag_sale_price_time_adj"
-					]
+					"default": {
+						"ind_vars": [
+							"land_area_sqft",
+							"commercial_rent",
+							"building_footprint",
+							"building_height",
+							"jobs_per_sqft",
+							"spatial_lag_sale_price_time_adj"
+						]
+					}
 				},
 				"residential_multi_family": {
-					"ind_vars": [
-						"land_area_sqft",
-						"bldg_year_built",
-						"finished_living_area_sqft",
-						"bldg_quality_num",
-						"bldg_condition_num",
-						"spatial_lag_sale_price_time_adj"
-					]
+					"default": {
+						"ind_vars": [
+							"land_area_sqft",
+							"bldg_year_built",
+							"finished_living_area_sqft",
+							"bldg_quality_num",
+							"bldg_condition_num",
+							"spatial_lag_sale_price_time_adj"
+						]
+					}
 				},
 				"residential_single_family": {
-					"ind_vars": [
-						"land_area_sqft",
-						"bldg_year_built",
-						"finished_living_area_sqft",
-						"bldg_quality_num",
-						"bldg_condition_num",
-						"spatial_lag_sale_price_time_adj"
-					]
+					"default": {
+						"ind_vars": [
+							"land_area_sqft",
+							"bldg_year_built",
+							"finished_living_area_sqft",
+							"bldg_quality_num",
+							"bldg_condition_num",
+							"spatial_lag_sale_price_time_adj"
+						]
+					}
 				}
 			},
 			"vacant": {
