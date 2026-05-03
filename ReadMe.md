@@ -1,4 +1,5 @@
-#Introduction
+# Introduction
+
 This ReadMe contains step-by-step instructions for replicating the assessments found in this repository and used in Pro-Housing Pittsburgh's report on Tax Assessments.
 For any questions, please contact Connor Schwartz (Connor.Schwartz98@gmail.com).
 
