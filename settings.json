@@ -430,35 +430,65 @@
 		"models": {
 			"__comment": "This is where we choose which variables to include when running the models. Note that most of the models evaluate each variable and will exclude any that aren't useful - so it's ok to include a lot of variables here, the models will select the useful ones automatically.",
 			"main": {
-				"default": {
+				"commercial": {
+					"ind_vars": [
+						"land_area_sqft",
+						"commercial_rent",
+						"building_footprint",
+						"building_height",
+						"jobs_per_sqft",
+						"spatial_lag_sale_price_time_adj"
+					]
+				},
+				"residential_multi_family": {
 					"ind_vars": [
 						"land_area_sqft",
 						"bldg_year_built",
 						"finished_living_area_sqft",
 						"bldg_quality_num",
 						"bldg_condition_num",
-						"commercial_rent",
-						"building_footprint",
-						"building_count",
-						"building_height",
-						"jobs_per_sqft",
+						"spatial_lag_sale_price_time_adj"
+					]
+				},
+				"residential_single_family": {
+					"ind_vars": [
+						"land_area_sqft",
+						"bldg_year_built",
+						"finished_living_area_sqft",
+						"bldg_quality_num",
+						"bldg_condition_num",
 						"spatial_lag_sale_price_time_adj"
 					]
 				}
 			},
 			"hedonic": {
-				"default": {
+				"commercial": {
+					"ind_vars": [
+						"land_area_sqft",
+						"commercial_rent",
+						"building_footprint",
+						"building_height",
+						"jobs_per_sqft",
+						"spatial_lag_sale_price_time_adj"
+					]
+				},
+				"residential_multi_family": {
 					"ind_vars": [
 						"land_area_sqft",
 						"bldg_year_built",
 						"finished_living_area_sqft",
 						"bldg_quality_num",
 						"bldg_condition_num",
-						"commercial_rent",
-						"building_footprint",
-						"building_count",
-						"building_height",
-						"jobs_per_sqft",
+						"spatial_lag_sale_price_time_adj"
+					]
+				},
+				"residential_single_family": {
+					"ind_vars": [
+						"land_area_sqft",
+						"bldg_year_built",
+						"finished_living_area_sqft",
+						"bldg_quality_num",
+						"bldg_condition_num",
 						"spatial_lag_sale_price_time_adj"
 					]
 				}
