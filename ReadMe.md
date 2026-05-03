@@ -7,7 +7,7 @@ Instructions for downloading and installing OpenAvmKit are available at https://
 
 # Download following files
 
-The followed data input files are sued with OpenAvmKit:<br>
+The followed data input files are used with OpenAvmKit:<br>
 Allgheny County property assessment csv: https://data.wprdc.org/dataset/property-assessments<br>
 Allgheny County parcel GeoJSON: https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214<br>
 Allgheny County census tract GeoJSON: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-census-tracts-2020<br>
@@ -22,7 +22,7 @@ The following data input files are used for the graphs in the report:
 REPORT GRAPHS City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
 REPORT GRAPHS County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
 
-The following data input files are not currenlty used in our asssessment analysis, but may prove useful to other users:
+The following data input files are not currently used in our asssessment analysis, but may prove useful to other users:
 Allgheny County market value categories: https://data.wprdc.org/dataset/market-value-analysis-2021<br>
 Pittsburgh Steep slopes overlay: https://data.wprdc.org/dataset/25-or-greater-slope<br>
 Pittsburgh Flood zones: https://data.wprdc.org/dataset/2014-fema-flood-zones<br>
@@ -40,12 +40,12 @@ This should generate 9 files:<br>
 parcels.csv<br>
 sales.csv<br>
 parcels.parquet<br>
+REPORT GRAPHS city_council_districts.parquet<br>
+REPORT GRAPHS county_council_districts.parquet
 NOT USING market_value.parquet<br>
 NOT USING steep_slopes.parquet<br>
 NOT USING flood_zones.parquet<br>
-NOT USING undermined.parquet<br>
-REPORT GRAPHS city_council_districts.parquet<br>
-REPORT GRAPHS county_council_districts.parquet
+NOT USING undermined.parquet
 
 # OpenAvmKit settings
 
@@ -53,11 +53,11 @@ The settings.json file controls how data is read and used by OpenAvmKit. Here ar
 
 ### "locality"
 
-Locality metada (state, county name, imperial or metric, geographic coordinates of county center)
+Locality metada (state, county name, imperial or metric, geographic coordinates of county center).
 
 ### "data"
 
-This is where our input files get loaded. Some notes about this:
+This is where the input files get loaded.
 - There are 3 datasets here - "parcels"[parcels.csv] which is a CSV with data on every parcel (commercial rent data is included in "parcels"), "sales"[sales.csv] which is a CSV with records for all of our sales, and "geo_parcels"[parcels.parquet] which contains geometric data for each parcel id. We can load in as many additional datasets as we want.
 - The "key" attribute in all 3 datasets is used to join the datasets. We need to include the parcel id as the key for any file we load in (except for additional geometric files, which are matched using geometric joins instead)
 - Some basic calculations can be performed in the "calcs" section of settings.json to form new fields from existing ones.
@@ -65,14 +65,14 @@ This is where our input files get loaded. Some notes about this:
 
 ### "process"
 
-This is where the data gets processed, joined together, and loaded into dataframes. Some notes:
+This is where the data gets processed, joined together, and loaded into dataframes.
 - The "merge" section creates 2 dataframes - "universe" and "sales". "universe" contains parcel data (including commercial rents) and "sales" contains sales data - any additional datasets should be added to these lists, and would be joined using the aforementioned "key" attribute.
 - "enrich" allows you to perform additional calculations and merge additional geometric data onto your dataframes. We are attaching all of the data from our parquet files here with a geometric join. This section also supports OpenStreetMap integration - you can configure it to use OpenStreetMap to compute distances from amenities like parks, schools, bodies of water, etc. and add that to the dataframe. We do not currently do that.
 - "fill" allows you to control null handling - you can choose to fill in with zeros, "None", the median or mode value for that field, etc. You can also split the handling for vacant vs improved parcels.
 
 ### "modeling"
 
-This controls how the assessment is actually performed. Some notes:
+This controls how the assessment is actually performed.
 - "try_variables", "instructions", and "models" control which algorithms are used for modeling, and which variables they use. "try_variables" is for testing the significance of different possible variables.   OpenAVMKit then agg
 - "model_groups" creates different buckets for analysis - this is used for ratio studies/determining whether the model works well for different types of parcel (commercial, single-family,multi-family, etc). 
 - "instructions" are the "model_groups" and algorithm (regression, decsision tree, etc) used. For alogrithms, we are using linear regresssion ("mra"), spatial models ("local_area", "spatial_lag_area"), and decision tree ("lightgbm","xgboost") across all model groups.
