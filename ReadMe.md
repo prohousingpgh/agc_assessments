@@ -18,18 +18,18 @@ For heights and footprints, users may need to download a few files to get all of
 Run this script, which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
 python getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson
 
-The following data input files are used for the graphs in the report: <br>
-REPORT GRAPHS City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
-REPORT GRAPHS County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
+The following data input files are used for the graphs in the report, but are not currently used in the actual modeling: <br>
+City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
+County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
 
-The following data input files are not currently used in our asssessment analysis, but may prove useful to other users: <br>
+The following data input files are not currently used in our assessment analysis. However, they are converted into OpenAVMKit-compatible files by our pre-processing script, and could easily be added to our models in the future:<br>
 Allgheny County market value categories: https://data.wprdc.org/dataset/market-value-analysis-2021<br>
 Pittsburgh Steep slopes overlay: https://data.wprdc.org/dataset/25-or-greater-slope<br>
 Pittsburgh Flood zones: https://data.wprdc.org/dataset/2014-fema-flood-zones<br>
 Pittsburgh Undermined overlay: https://data.wprdc.org/dataset/undermined-areas<br>
 Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
 Note that the steep slopes, flood zone, and undermined overlays are for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis. <br>
-Commercial parcel data by extracting json responses from the search page of Crexi (https://www.crexi.com/search). These responses can be combined into a csv using this script: <br>
+Commercial parcel data can be obtained by extracting json responses from the search page of Crexi (https://www.crexi.com/search). These responses can be combined into a csv using this script: <br>
 python processCrexiData.py
 
 # Convert Data into Usuable Format
@@ -40,12 +40,12 @@ This should generate 9 files:<br>
 parcels.csv<br>
 sales.csv<br>
 parcels.parquet<br>
-REPORT GRAPHS city_council_districts.parquet<br>
-REPORT GRAPHS county_council_districts.parquet
-NOT USING market_value.parquet<br>
-NOT USING steep_slopes.parquet<br>
-NOT USING flood_zones.parquet<br>
-NOT USING undermined.parquet
+city_council_districts.parquet (currently only used for reports/results analysis)<br>
+county_council_districts.parquet (currently only used for reports/results analysis)<br>
+market_value.parquet (currently not used for modeling)<br>
+steep_slopes.parquet (currently not used for modeling)<br>
+flood_zones.parquet (currently not used for modeling)<br>
+undermined.parquet (currently not used for modeling)
 
 # OpenAvmKit settings
 
@@ -53,7 +53,7 @@ The settings.json file controls how data is read and used by OpenAvmKit. Here ar
 
 ### "locality"
 
-Locality metada (state, county name, imperial or metric, geographic coordinates of county center).
+Locality metadata (state, county name, imperial or metric, geographic coordinates of county center).
 
 ### "data"
 
@@ -73,11 +73,11 @@ This is where the data gets processed, joined together, and loaded into datafram
 ### "modeling"
 
 This controls how the assessment is actually performed.
-- "try_variables", "instructions", and "models" control which algorithms are used for modeling, and which variables they use. "try_variables" is for testing the significance of different possible variables.   OpenAVMKit then agg
-- "model_groups" creates different buckets for analysis - this is used for ratio studies/determining whether the model works well for different types of parcel (commercial, single-family,multi-family, etc). 
-- "instructions" are the "model_groups" and algorithm (regression, decsision tree, etc) used. For alogrithms, we are using linear regresssion ("mra"), spatial models ("local_area", "spatial_lag_area"), and decision tree ("lightgbm","xgboost") across all model groups.
-- "models" specifies which variables used in the models. We use "land_area_sqft", "bldg_year_built", "finished_living_area_sqft", "bldg_quality_num", "building_condition_num", and "spatial_lag_sale_price_time_adj". These variables are in the "universe" dataframe.
-- "analysis" and "field_classification" are also used for ratio studies/results analysis.
+- "try_variables" is for testing the significance of different possible variables. It does not impact the final models/results and is just a tool for determining the best variables for the model.
+- "model_groups" defines the actual model groups. Parcels will be split into groups (i.e. commercial, single-family, multi-family) for both modeling and result analysis. 
+- "instructions" defines the algorithms (regression, decsision tree, etc) to use for each model group. Currently, we are using linear regression ("mra"), spatial models ("local_area", "spatial_lag_area"), and decision tree models ("lightgbm","xgboost") across all model groups.
+- "models" specifies which variables to use in the models. We use "land_area_sqft", "bldg_year_built", "finished_living_area_sqft", "bldg_quality_num", "building_condition_num", and "spatial_lag_sale_price_time_adj" for residential parcels. We use "land_area_sqft", "commercial_rent", "building_footprint", "building_height", "jobs_per_sqft", and "spatial_lag_sale_price_time_adj" for commercial parcels. These variables are in the "universe" dataframe.
+- "analysis" and "field_classification" are used for ratio studies/results analysis.
 
 ### "ref"
 
@@ -109,4 +109,4 @@ This allows users to perform all of the OpenAvmKit operations on the data.
 There is a set of Jupyter notebooks in OpenAvmKit that walk users through the process of generating assessments. Book 03-model.ipynb allows users to generate valuations.
 
 # Results
-The Results of the aboves steps are uploaded to [...].
+A sample final results file, residential_predictions_20260503.csv, is available in this repository.
