@@ -108,7 +108,8 @@ parcel_data['census_tract_lycd_land_prediction_median'] = parcel_data['land_area
 parcel_data['census_tract_lycd_land_prediction_mean'] = parcel_data['land_area_sqft'] * parcel_data['census_tract_land_price_per_sqft_mean']
 
 for i, row in parcel_data.iterrows():
-    if row['is_vacant'] == "True":
+    # For vacant parcels and parcels where our estimated land value is greater than the total value, just use the land value as the total
+    if row['is_vacant'] == "True" or row['census_tract_lycd_land_prediction_mean'] > row['total_prediction']:
         parcel_data.at[i, 'total_prediction'] = row['census_tract_lycd_land_prediction_mean']
     muni = row['MUNIDESC'].replace("  ", " ")
     if "Ward - " in muni:
@@ -180,4 +181,4 @@ parcel_geometry_assessments = parcel_geometry_assessments.merge(parcel_data, lef
 parcel_data.to_csv("predictions.csv", index=False)
 parcel_geometry_assessments.to_parquet('predictions.parquet')
 
-parcel_data[parcel_data['CLASS'] == 'R'].to_csv("residential_predictions.csv", header=['PARCEL_ID', 'USE_DESCRIPTION', 'MUNICIPALITY', 'SCHOOL_DISTRICT', 'LAND_AREA_SQFT', 'CURRENT_ASSESSMENT_LAND', 'CURRENT_ASSESSMENT_TOTAL', 'NEW_ASSESSMENT_LAND', 'NEW_ASSESSMENT_TOTAL'], columns=['PARID', 'USEDESC', 'municipality', 'school_district', 'land_area_sqft', 'assessed_land', 'assessed_total', 'census_tract_lycd_land_prediction_mean', 'total_prediction'], index=False)
+parcel_data[parcel_data['CLASS'] == 'R'].to_csv("residential_predictions.csv", header=['PARCEL_ID', 'USE_DESCRIPTION', 'MUNICIPALITY', 'SCHOOL_DISTRICT', 'LAND_AREA_SQFT', 'BUILDING_AREA_SQFT', 'CURRENT_ASSESSMENT_LAND', 'CURRENT_ASSESSMENT_TOTAL', 'NEW_ASSESSMENT_LAND', 'NEW_ASSESSMENT_TOTAL'], columns=['PARID', 'USEDESC', 'municipality', 'school_district', 'land_area_sqft', 'building_area', 'assessed_land', 'assessed_total', 'census_tract_lycd_land_prediction_mean', 'total_prediction'], index=False)
