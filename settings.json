@@ -634,10 +634,7 @@
 				["notin", "use", ["010 SINGLE FAMILY", "060 TOWNHOUSE", "070 ROWHOUSE", "080 MOBILE HOME", "090 MOBILE HOME (IN PARK)", "098 CONDEMNED/BOARDED-UP", "099 RES AUX BUILDING (NO HOUSE)", "100 VACANT LAND", "111 BUILDERS LOT", "500 RESIDENTIAL VACANT LAND"]]
 			],
 			"commercial":  ["or",
-				["isin", "class", ["C COMMERCIAL"]]
-			],
-			"other":  ["or",
-				["isin", "class", ["I INDUSTRIAL", "F AGRICULTURAL", "G GOVERNMENT", "U UTILITIES", "O OTHER"]]
+				["isin", "class", ["C COMMERCIAL", "I INDUSTRIAL", "F AGRICULTURAL", "G GOVERNMENT", "U UTILITIES", "O OTHER"]]
 			]
 		},
 		"dupes": {

@@ -111,6 +111,8 @@ for i, row in parcel_data.iterrows():
     # For vacant parcels and parcels where our estimated land value is greater than the total value, just use the land value as the total
     if row['is_vacant'] == "True" or row['census_tract_lycd_land_prediction_mean'] > row['total_prediction']:
         parcel_data.at[i, 'total_prediction'] = row['census_tract_lycd_land_prediction_mean']
+
+for i, row in parcel_data.iterrows():
     muni = row['MUNIDESC'].replace("  ", " ")
     if "Ward - " in muni:
         muni = muni.split("Ward - ")[1]
