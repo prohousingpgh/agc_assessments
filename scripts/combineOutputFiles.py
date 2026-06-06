@@ -101,7 +101,7 @@ census_tract_land_price_per_sqft_valid.rename(columns={'census_tract': 'nearest_
 census_tract_land_price_per_sqft_valid.rename(columns={'census_tract_land_price_per_sqft_temp_median': 'census_tract_land_price_per_sqft_median'}, inplace=True)
 census_tract_land_price_per_sqft_valid.rename(columns={'census_tract_land_price_per_sqft_temp_mean': 'census_tract_land_price_per_sqft_mean'}, inplace=True)
 census_tract_land_price_per_sqft = gpd.sjoin_nearest(census_tract_land_price_per_sqft, census_tract_land_price_per_sqft_valid, how='left', rsuffix='nearest')
-census_tract_land_price_per_sqft.to_csv('census_tract_land_price_per_sqft.csv', index=False)
+census_tract_land_price_per_sqft.to_csv('census_tract_land_price_per_sqft.csv', index=False, header=['CENSUS_TRACT','LAND_VALUE_PER_SQFT'], columns=['census_tract', 'census_tract_land_price_per_sqft_mean'])
 census_tract_land_price_per_sqft = census_tract_land_price_per_sqft[['census_tract','census_tract_total_price_per_sqft_median','census_tract_total_price_per_sqft_mean','census_tract_land_percentage','census_tract_land_price_per_sqft_median','census_tract_land_price_per_sqft_mean']]
 parcel_data = parcel_data.merge(census_tract_land_price_per_sqft, how='left', left_on=['census_tract'], right_on=['census_tract'])
 parcel_data['census_tract_lycd_land_prediction_median'] = parcel_data['land_area_sqft'] * parcel_data['census_tract_land_price_per_sqft_median']
