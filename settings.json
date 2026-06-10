@@ -363,10 +363,10 @@
 			]
 		},
 		"metadata": {
-			"__comment": "The model is build using sales going back to 2020, but only sales since 2024 are used for testing the model and running ratio studies.",
-			"valuation_date": "2025-01-01",
-			"use_sales_from": 2020,
-			"test_sales_from": 2024,
+			"__comment": "The model is built using sales going back to 2021, but only sales since 2025 are used for testing the model and running ratio studies.",
+			"valuation_date": "2026-01-01",
+			"use_sales_from": 2021,
+			"test_sales_from": 2025,
 			"modeler": "<MODELER NAME HERE>",
 			"modeler_nick": "<MODELER NICKNAME HERE>"
 		},
