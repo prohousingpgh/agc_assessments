@@ -10,6 +10,10 @@ parcel_data = pd.read_csv(sys.argv[1], dtype={'PARID': str, 'PROPERTYHOUSENUM': 
 parcel_geometry = gpd.read_file(sys.argv[2])
 census_tract_geometry = gpd.read_file(sys.argv[3], columns=['NAME'])
 openavmkit_output_folder = sys.argv[4]
+
+parcel_data['USE_WITH_DESC'] = parcel_data['USECODE'] + ' ' + parcel_data['USEDESC']
+parcel_data['CLASS_WITH_DESC'] = parcel_data['CLASS'] + ' ' + parcel_data['CLASSDESC']
+
 universe_data = pd.DataFrame(data={}, columns=['key','spatial_lag_sale_price_time_adj','spatial_lag_sale_price_time_adj_confidence','spatial_lag_sale_price_time_adj_vacant','spatial_lag_sale_price_time_adj_vacant_confidence','spatial_lag_sale_price_time_adj_land_sqft','spatial_lag_sale_price_time_adj_land_sqft_confidence','spatial_lag_sale_price_time_adj_impr_sqft','spatial_lag_sale_price_time_adj_impr_sqft_confidence','spatial_lag_floor_area_ratio','spatial_lag_bedroom_density','spatial_lag_bldg_age_years','spatial_lag_bldg_area_finished_sqft','spatial_lag_land_area_sqft','spatial_lag_bldg_quality_num','spatial_lag_bldg_condition_num'])
 prediction_data_ensemble = pd.DataFrame(data={}, columns=['key','total_prediction','land_area_sqft','census_tract'])
 prediction_data_mra = pd.DataFrame(data={}, columns=['key','regression_total_prediction'])
@@ -48,10 +52,6 @@ parcel_data['YEARS_SINCE_SALE'] = pd.Series(dtype='float64')
 parcel_data['VALUATION_RATIO'] = pd.Series(dtype='float64')
 parcel_data['NEW_SALES_RATIO'] = pd.Series(dtype='float64')
 parcel_data['OLD_SALES_RATIO'] = pd.Series(dtype='float64')
-total_existing_residential_assessment = parcel_data.loc[parcel_data['CLASS'] == 'R', 'assessed_total'].sum()
-total_new_residential_assessment = parcel_data.loc[parcel_data['CLASS'] == 'R', 'total_prediction'].sum()
-total_residential_valuation_ratio = total_new_residential_assessment / total_existing_residential_assessment
-print('total_residential_valuation_ratio is', total_residential_valuation_ratio)
 
 parcel_geometry.rename(columns={'PIN': 'PARCEL_ID'}, inplace=True)
 census_tract_geometry.rename(columns={'NAME': 'census_tract'}, inplace=True)
@@ -95,6 +95,11 @@ for i, row in parcel_data.iterrows():
     # For vacant parcels and parcels where our estimated land value is greater than the total value, just use the land value as the total
     if row['is_vacant'] == "True" or row['census_tract_lycd_land_prediction_mean'] > row['total_prediction']:
         parcel_data.at[i, 'total_prediction'] = row['census_tract_lycd_land_prediction_mean']
+
+total_existing_residential_assessment = parcel_data.loc[parcel_data['CLASS'] == 'R', 'assessed_total'].sum()
+total_new_residential_assessment = parcel_data.loc[parcel_data['CLASS'] == 'R', 'total_prediction'].sum()
+total_residential_valuation_ratio = total_new_residential_assessment / total_existing_residential_assessment
+print('total_residential_valuation_ratio is', total_residential_valuation_ratio)
 
 for i, row in parcel_data.iterrows():
     muni = row['MUNIDESC'].replace("  ", " ")
