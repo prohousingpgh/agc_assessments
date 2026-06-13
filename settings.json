@@ -372,49 +372,23 @@
 		},
 		"instructions": {
 			"__comment": "This is where the models actually get run to generate predictions. We run a few different models and combine them to get the final assessments.",
-			"__comment2": "'assessor' just takes the existing assessments. 'mra' is a standard regression. 'local_area' and 'spatial_lag_area' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are fancy machine learning decision tree models. 'gwr' is gradient-weighted regression.",
+			"__comment2": "'assessor' just takes the existing assessments and is run only as a benchmark. It is not included in the final ensemble.",
+			"__comment3": "The final ensemble considers five OpenAVMKit models: 'mra' is a standard regression; 'local_area' and 'spatial_lag_area' predict values from nearby sale prices per square foot; 'lightgbm' and 'xgboost' are tree-based machine learning models.",
 			"main": {
 				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
-				"stacked_ensemble": {
-					"enabled": true,
-					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
-					"contextual_features": [],
-					"categorical_contextual_features": [],
-					"validation_fraction": 0.2
-				}
-			},
-			"hedonic": {
-				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
-				"stacked_ensemble": {
-					"enabled": true,
-					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
-					"contextual_features": [],
-					"categorical_contextual_features": [],
-					"validation_fraction": 0.2
+				"ensemble": {
+					"__comment": "OpenAVMKit starts with these five models, repeatedly drops the weakest model-level candidate, and uses the median per-parcel prediction from the best-performing subset.",
+					"type": "median",
+					"models": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
+					"optimize": true
 				}
 			},
 			"vacant": {
-				"run": [],
-				"stacked_ensemble": {
-					"enabled": true,
-					"meta_model": "ridge",
-					"models_to_include": [],
-					"contextual_features": [],
-					"categorical_contextual_features": [],
-					"validation_fraction": 0.2
-				}
+				"__comment": "Vacant/hedonic land models are disabled; land values are now handled through LYCD instead.",
+				"run": []
 			},
 			"time_adjustment": {
 				"period": "Q"
-			},
-			"allocation": {
-				"hedonic": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
-				"vacant": ["local_area", "spatial_lag_area"],
-				"plot": {
-
-				}
 			},
 			"model_group_order": [
 				"commercial",
@@ -465,54 +439,6 @@
 							"spatial_lag_sale_price_time_adj"
 						]
 					}
-				}
-			},
-			"hedonic": {
-				"commercial": {
-					"default": {
-						"ind_vars": [
-							"land_area_sqft",
-							"commercial_rent",
-							"building_footprint",
-							"building_height",
-							"jobs_per_sqft",
-							"spatial_lag_sale_price_time_adj"
-						]
-					}
-				},
-				"residential_multi_family": {
-					"default": {
-						"ind_vars": [
-							"land_area_sqft",
-							"bldg_year_built",
-							"finished_living_area_sqft",
-							"bldg_quality_num",
-							"bldg_condition_num",
-							"spatial_lag_sale_price_time_adj"
-						]
-					}
-				},
-				"residential_single_family": {
-					"default": {
-						"ind_vars": [
-							"land_area_sqft",
-							"bldg_year_built",
-							"finished_living_area_sqft",
-							"bldg_quality_num",
-							"bldg_condition_num",
-							"spatial_lag_sale_price_time_adj"
-						]
-					}
-				}
-			},
-			"vacant": {
-				"default": {
-					"ind_vars": [
-						"land_area_sqft",
-						"commercial_rent",
-						"jobs_per_sqft",
-						"spatial_lag_sale_price_time_adj"
-					]
 				}
 			}
 		},
