@@ -80,7 +80,7 @@
 				}
 			},
 			"sales": {
-				"__comment": "Read in the sales data file. This contains all of the sales from the Allegheny County real estate dataset.",
+				"__comment": "Read in the sales data file. This contains all of the sales information from the Allegheny County real estate dataset.",
 				"filename": "sales.csv",
 				"load": {
 					"key": ["PARCEL_ID", "string"],
@@ -100,18 +100,20 @@
 					"bldg_area_finished_sqft": ["FINISHEDAREA", "float"]
 				},
 				"calc": {
+					"__comment": "key_sale is used as a unique id for sales - it consists of the parcel id plus the date",
 					"key_sale": ["join",
 						["values",
 							"PARCEL_ID",
 							["asstr", ["datetimestr", "SALEDATE", "str:%m-%d-%Y"]]
 						], "str:---"
 					],
+					"__comment1": "deed_id is used for valid sales detection. If we have multiple sales with the same deed number, they are multi-parcel sales and should be excluded. Multi parcel sales should already be excluded by looking at the SALECODE field in the county dataset, but this provides an extra layer of validation.",
 					"deed_id": ["join",
 						["values",
 							"DEEDBOOK","DEEDPAGE"
 						], "str:---"
 					],
-					"__comment": "valid_sale is an important field. It will be set to 'true' only for typical sales, and false for multi-parcel sales, love and affection sales, etc. For modeling purposes, we will only use valid sales, since other sales may or may not reflect market rates.",
+					"__comment2": "valid_sale is an important field. It will be set to 'true' only for typical sales, and false for multi-parcel sales, love and affection sales, etc. For modeling purposes, we will only use valid sales, since other sales may or may not reflect market rates.",
 					"valid_sale": ["?", ["==", "SALECODE", "str:0 VALID SALE"]],
 					"vacant_sale": ["?", ["isin", "use", ["098 CONDEMNED/BOARDED-UP", "099 RES AUX BUILDING (NO HOUSE)", "100 VACANT LAND", "110 >10 ACRES VACANT", "111 BUILDERS LOT", "300 VACANT INDUSTRIAL LAND", "400 VACANT COMMERCIAL LAND", "500 RESIDENTIAL VACANT LAND", "998 TOTAL/MAJOR FIRE DAMAGE - COMM", "999 UNLOCATED PARCEL"]]]
 				}
@@ -125,7 +127,7 @@
 				}
 			},
 			"market_value": {
-				"__comment": "Load in market value data from https://data.wprdc.org/dataset/market-value-analysis-2021",
+				"__comment": "Load in market value data from https://data.wprdc.org/dataset/market-value-analysis-2021 (not currently used in our models)",
 				"filename": "geo/market_value.parquet",
 				"dupes": "allow",
 				"load": {
@@ -133,7 +135,7 @@
 				}
 			},
 			"steep_slopes": {
-				"__comment": "Load in steep slope data from https://data.wprdc.org/dataset/25-or-greater-slope",
+				"__comment": "Load in steep slope data from https://data.wprdc.org/dataset/25-or-greater-slope (not currently used in our models)",
 				"filename": "geo/steep_slopes.parquet",
 				"dupes": "allow",
 				"load": {
@@ -141,7 +143,7 @@
 				}
 			},
 			"flood_zones": {
-				"__comment": "Load in flood zone data from https://data.wprdc.org/dataset/2014-fema-flood-zones",
+				"__comment": "Load in flood zone data from https://data.wprdc.org/dataset/2014-fema-flood-zones (not currently used in our models)",
 				"filename": "geo/flood_zones.parquet",
 				"dupes": "allow",
 				"load": {
@@ -149,7 +151,7 @@
 				}
 			},
 			"undermined": {
-				"__comment": "Load in undermined data from https://data.wprdc.org/dataset/undermined-areas",
+				"__comment": "Load in undermined data from https://data.wprdc.org/dataset/undermined-areas (not currently used in our models)",
 				"filename": "geo/undermined.parquet",
 				"dupes": "allow",
 				"load": {
@@ -157,7 +159,7 @@
 				}
 			},
 			"city_council_districts": {
-				"__comment": "Load in city council district from https://data.wprdc.org/dataset/city-council-districts-2012",
+				"__comment": "Load in city council district from https://data.wprdc.org/dataset/city-council-districts-2012 (not currently used in our models)",
 				"filename": "geo/city_council_districts.parquet",
 				"dupes": "allow",
 				"load": {
@@ -165,7 +167,7 @@
 				}
 			},
 			"county_council_districts": {
-				"__comment": "Load in county council district from https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts",
+				"__comment": "Load in county council district from https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts (not currently used in our models)",
 				"filename": "geo/county_council_districts.parquet",
 				"dupes": "allow",
 				"load": {
@@ -174,15 +176,14 @@
 			}
 		},
 		"process": {
-			"__comment": "These operations actually assemble your data. 'merge' will assemble your base dataframes from your individual data sources, and 'enrich' will derive data that can be calculated from the base fields.",
+			"__comment": "These operations actually assemble your data. 'merge' will assemble the base dataframes from the input files, and 'enrich' will create additional calculated fields from the base data.",
 			"merge": {
 				"__comment": "universe contains intrinsic properties of each parcel. sales contains sales data.",
-
 				"universe": ["parcels"],
 				"sales": ["sales"]
 			},
 			"dupes": {
-				"__comment": "Handle duplicates - this basically just deletes any instances where there are rows for the same parcel.",
+				"__comment": "Handle duplicates - this basically just deletes any instances where there are multiple rows for the same parcel.",
 				"universe": "$$ref.dupes",
 				"sales": "$$ref.dupes_key_sale"
 			},
@@ -200,7 +201,7 @@
 				"__comment2": "spatial_lag computes weighted average of nearby (with a half mile) parcels. This is computed for a few different fields, including sale prices, building quality, building condition, and building age.",
 				"spatial_lag": {
 					"model_groups": {
-						"__comment": "The spatial_lag fields for residential will be based off the values of nearby residential parcels, and the fields for commercial will be based off nearby commercial parcels. This can be changed - if we want to, we can include residential parcels in the commercial spatial lag computations.",
+						"__comment": "The spatial_lag fields for residential will be based off the values of nearby residential parcels. We are also using nearby residential data for commercial parcels, due to low amounts of data for commercial.",
 						"residential_single_family": {
 							"sample_from": [
 								"residential_single_family"
@@ -366,55 +367,16 @@
 			"__comment": "The model is built using sales going back to 2021, but only sales since 2025 are used for testing the model and running ratio studies.",
 			"valuation_date": "2026-01-01",
 			"use_sales_from": 2021,
-			"test_sales_from": 2025,
-			"modeler": "<MODELER NAME HERE>",
-			"modeler_nick": "<MODELER NICKNAME HERE>"
+			"test_sales_from": 2025
 		},
 		"instructions": {
 			"__comment": "This is where the models actually get run to generate predictions. We run a few different models and combine them to get the final assessments.",
-			"__comment2": "'assessor' just takes the existing assessments. 'mra' is a standard regression. 'local_area' and 'spatial_lag_area' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are fancy machine learning decision tree models. 'gwr' is gradient-weighted regression.",
+			"__comment2": "'assessor' just takes the existing assessments (this is just included for comparison purposes and will not be included in the final predictions). 'mra' is a standard regression. 'local_area' and 'spatial_lag_area' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are machine learning decision tree models. 'gwr' is gradient-weighted regression.",
 			"main": {
-				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
-				"stacked_ensemble": {
-					"enabled": true,
-					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
-					"contextual_features": [],
-					"categorical_contextual_features": [],
-					"validation_fraction": 0.2
-				}
-			},
-			"hedonic": {
-				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
-				"stacked_ensemble": {
-					"enabled": true,
-					"meta_model": "ridge",
-					"models_to_include": ["mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
-					"contextual_features": [],
-					"categorical_contextual_features": [],
-					"validation_fraction": 0.2
-				}
-			},
-			"vacant": {
-				"run": [],
-				"stacked_ensemble": {
-					"enabled": true,
-					"meta_model": "ridge",
-					"models_to_include": [],
-					"contextual_features": [],
-					"categorical_contextual_features": [],
-					"validation_fraction": 0.2
-				}
+				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"]
 			},
 			"time_adjustment": {
 				"period": "Q"
-			},
-			"allocation": {
-				"hedonic": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"],
-				"vacant": ["local_area", "spatial_lag_area"],
-				"plot": {
-
-				}
 			},
 			"model_group_order": [
 				"commercial",
@@ -428,7 +390,7 @@
 			}
 		},
 		"models": {
-			"__comment": "This is where we choose which variables to include when running the models. Note that most of the models evaluate each variable and will exclude any that aren't useful - so it's ok to include a lot of variables here, the models will select the useful ones automatically.",
+			"__comment": "This is where we choose which variables to include when running the models.",
 			"main": {
 				"commercial": {
 					"default": {
@@ -465,54 +427,6 @@
 							"spatial_lag_sale_price_time_adj"
 						]
 					}
-				}
-			},
-			"hedonic": {
-				"commercial": {
-					"default": {
-						"ind_vars": [
-							"land_area_sqft",
-							"commercial_rent",
-							"building_footprint",
-							"building_height",
-							"jobs_per_sqft",
-							"spatial_lag_sale_price_time_adj"
-						]
-					}
-				},
-				"residential_multi_family": {
-					"default": {
-						"ind_vars": [
-							"land_area_sqft",
-							"bldg_year_built",
-							"finished_living_area_sqft",
-							"bldg_quality_num",
-							"bldg_condition_num",
-							"spatial_lag_sale_price_time_adj"
-						]
-					}
-				},
-				"residential_single_family": {
-					"default": {
-						"ind_vars": [
-							"land_area_sqft",
-							"bldg_year_built",
-							"finished_living_area_sqft",
-							"bldg_quality_num",
-							"bldg_condition_num",
-							"spatial_lag_sale_price_time_adj"
-						]
-					}
-				}
-			},
-			"vacant": {
-				"default": {
-					"ind_vars": [
-						"land_area_sqft",
-						"commercial_rent",
-						"jobs_per_sqft",
-						"spatial_lag_sale_price_time_adj"
-					]
 				}
 			}
 		},
@@ -552,6 +466,7 @@
 		}
 	},
 	"field_classification": {
+		"__comment": "important fields are used for breakdowns in ratio study reports",
 		"important": {
 			"fields": {
 				"impr_category": "use",
@@ -573,6 +488,7 @@
 				"city"
 			]
 		},
+		"__comment1": "This section indicates the data type for each variable, as well as whether it's a characteristic of the land or of the building (this distinction is mainly relevant for the vacant land analysis module, which we are not currently using)",
 		"land": {
 			"numeric": [
 				"commercial_rent",
@@ -587,7 +503,6 @@
 				"county_council_district"
 			]
 		},
-		"__comment": "Fields classified as 'impr' will be stripped when computing land value - it's important to include all improvement-related fields here.",
 		"impr": {
 			"numeric": [
 				"county_impr_value",
@@ -614,11 +529,6 @@
 				"condition",
 				"cdu_grade",
 				"heating_cooling"
-			]
-		},
-		"other": {
-			"categorical": [
-				"owner"
 			]
 		}
 	},
