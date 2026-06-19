@@ -1,9 +1,3 @@
-# Add this file to agc_assessments as .github/workflows/notify-dataviz.yml
-# so assessments_dataviz rebuilds when output/ is updated on main.
-#
-# Requires a PAT with repo scope stored as NOTIFY_DATAVIZ_TOKEN in agc_assessments
-# (or use GitHub App). Target repo: prohousingpgh/assessments_dataviz
-
 name: Notify dataviz
 
 on:
@@ -11,15 +5,27 @@ on:
     branches: [main]
     paths:
       - "output/**"
+  workflow_dispatch:
 
 jobs:
   dispatch:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Trigger assessments_dataviz data rebuild
         env:
           GH_TOKEN: ${{ secrets.NOTIFY_DATAVIZ_TOKEN }}
+          DATAVIZ_REPO: prohousingpgh/assessments_dataviz
         run: |
-          gh api repos/prohousingpgh/assessments_dataviz/dispatches \
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::NOTIFY_DATAVIZ_TOKEN is required and must have permission to create repository_dispatch events in ${DATAVIZ_REPO}."
+            exit 1
+          fi
+
+          gh api "repos/${DATAVIZ_REPO}/dispatches" \
+            --method POST \
             -f event_type=agc_output_updated \
-            -f client_payload[ref]=${{ github.sha }}
+            -f client_payload[source_repository]=${{ github.repository }} \
+            -f client_payload[source_ref]=${{ github.ref_name }} \
+            -f client_payload[source_sha]=${{ github.sha }}
