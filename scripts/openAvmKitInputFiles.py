@@ -73,26 +73,6 @@ commercial_rents_gdf = gpd.GeoDataFrame(
     commercial_rents, geometry=gpd.points_from_xy(commercial_rents['LONGITUDE'], commercial_rents['LATITUDE']), crs="EPSG:4326"
 )
 
-footprint_dataframes = []
-for file in os.listdir('building_footprints'):
-    print(file)
-    df = pd.read_json('building_footprints/' + file, lines=True)
-    df['BUILDING_HEIGHT'] = [d.get('height') * 3.28084 for d in df['properties']]
-    df['geometry'] = df['geometry'].apply(shape)
-    footprint_dataframes.append(df)
-all_footprints = pd.concat(footprint_dataframes)
-footprints_gdf = gpd.GeoDataFrame(all_footprints, crs=4326)
-
-footprints_gdf = footprints_gdf.to_crs('EPSG:3857')
-footprints_gdf['BUILDING_FOOTPRINT'] = footprints_gdf.geometry.area * 10.76391
-footprints_gdf['centroid'] = footprints_gdf.geometry.centroid
-footprints_gdf.set_geometry('centroid', inplace=True)
-footprints_gdf = footprints_gdf.to_crs('EPSG:4326')
-
-join_footprints = gpd.sjoin(parcel_geometry, footprints_gdf, how='left', predicate='intersects', lsuffix='parcel', rsuffix='footprint')
-join_footprints.drop(columns=['geometry_footprint'], inplace=True)
-parcel_footprints_heights = join_footprints.groupby(['PARCEL_ID']).agg(BUILDING_HEIGHT=('BUILDING_HEIGHT', 'mean'), BUILDING_FOOTPRINT=('BUILDING_FOOTPRINT', 'sum'), BUILDING_COUNT=('BUILDING_FOOTPRINT', 'count'))
-
 sales_data_1 = parcel_data[['PARCEL_ID','RECORDDATE','SALEDATE','SALEPRICE','SALECODE','SALEDESC','DEEDBOOK','DEEDPAGE','CHANGENOTICEADDRESS1','CHANGENOTICEADDRESS2','CHANGENOTICEADDRESS3','CHANGENOTICEADDRESS4','USECODE','USEDESC','CLASS','CLASSDESC']].copy()
 sales_data = sales_data_1[~sales_data_1['SALEDATE'].isnull()].copy()
 sales_data['SALECODE'] = sales_data['SALECODE'] + ' ' + sales_data['SALEDESC']
@@ -156,17 +136,12 @@ parcel_geometry_distance.set_geometry('geometry', inplace=True)
 
 parcel_geometry_calculations = pd.merge(parcel_geometry_area, parcel_geometry_distance, on='PARCEL_ID', suffixes=('_area', '_distance'))
 parcel_data = pd.merge(parcel_data, parcel_geometry_calculations, how='left', on='PARCEL_ID')
-parcel_data = pd.merge(parcel_data, parcel_footprints_heights, how='left', on='PARCEL_ID')
 parcel_data = parcel_data.assign(CENSUS_TRACT=parcel_data.CENSUS_TRACT_WITHIN.fillna(parcel_data.CENSUS_TRACT_NEAREST))
-average_height = parcel_data.loc[parcel_data['BUILDING_HEIGHT'] > 0, 'BUILDING_HEIGHT'].mean()
 count = 0
 for i, row in parcel_data.iterrows():
     count += 1
     if count % 1000 == 0:
         print(count, 'entries processed')
-    # Building height is missing for a lot of parcels. Fill in with the average where necessary.
-    if row['BUILDING_HEIGHT'] <= 0 and row['BUILDING_FOOTPRINT'] > 0:
-        parcel_data.at[i, 'BUILDING_HEIGHT'] = average_height
     if row['geometry_distance'] is not None:
         geometry_distance = row['geometry_distance']
         # Get commercial rent for non-residential parcels
@@ -187,7 +162,7 @@ print(sales_data.head())
 print(parcel_geometry.head())
 print(market_value.head())
 
-parcel_data.to_csv("parcels.csv", index=False, columns=["PARCEL_ID", "ADDRESS", "PROPERTYCITY", "PROPERTYSTATE", "PROPERTYZIP", "MUNICIPALITY", "SCHOOL", "LEGAL", "NEIGHBORHOOD", "TAXCODE", "TAXSUBCODE", "OWNER", "CLASS", "USE", "LOTAREA", "HOMESTEADFLAG", "FARMSTEADFLAG", "CLEANGREEN", "ABATEMENTFLAG", "COUNTYBUILDING", "COUNTYLAND", "COUNTYTOTAL", "COUNTYEXEMPTBLDG", "LOCALBUILDING", "LOCALLAND", "LOCALTOTAL", "FAIRMARKETBUILDING", "FAIRMARKETLAND", "FAIRMARKETTOTAL", "STYLE", "STORIES", "YEARBLT", "EXTERIORFINISH", "ROOF", "BASEMENT", "GRADE", "GRADENUM", "CONDITION", "CONDITIONNUM", "CDU", "TOTALROOMS", "BEDROOMS", "FULLBATHS", "HALFBATHS", "HEATINGCOOLING", "FIREPLACES", "BSMTGARAGE", "FINISHEDLIVINGAREA", "CARDNUMBER", "ALT_ID", "FINISHEDAREA", "COMMERCIALRENT", "PARCEL_AREA", "PARCEL_ID", "BUILDING_COUNT", "BUILDING_FOOTPRINT", "BUILDING_HEIGHT", "IS_PITTSBURGH_SD", "CENSUS_TRACT_NEAREST", "CENSUS_TRACT_WITHIN", "CENSUS_TRACT", "JOBS_PER_SQFT", "JOINED_BLOCKS"])
+parcel_data.to_csv("parcels.csv", index=False, columns=["PARCEL_ID", "ADDRESS", "PROPERTYCITY", "PROPERTYSTATE", "PROPERTYZIP", "MUNICIPALITY", "SCHOOL", "LEGAL", "NEIGHBORHOOD", "TAXCODE", "TAXSUBCODE", "OWNER", "CLASS", "USE", "LOTAREA", "HOMESTEADFLAG", "FARMSTEADFLAG", "CLEANGREEN", "ABATEMENTFLAG", "COUNTYBUILDING", "COUNTYLAND", "COUNTYTOTAL", "COUNTYEXEMPTBLDG", "LOCALBUILDING", "LOCALLAND", "LOCALTOTAL", "FAIRMARKETBUILDING", "FAIRMARKETLAND", "FAIRMARKETTOTAL", "STYLE", "STORIES", "YEARBLT", "EXTERIORFINISH", "ROOF", "BASEMENT", "GRADE", "GRADENUM", "CONDITION", "CONDITIONNUM", "CDU", "TOTALROOMS", "BEDROOMS", "FULLBATHS", "HALFBATHS", "HEATINGCOOLING", "FIREPLACES", "BSMTGARAGE", "FINISHEDLIVINGAREA", "CARDNUMBER", "ALT_ID", "FINISHEDAREA", "COMMERCIALRENT", "PARCEL_AREA", "PARCEL_ID", "IS_PITTSBURGH_SD", "CENSUS_TRACT_NEAREST", "CENSUS_TRACT_WITHIN", "CENSUS_TRACT", "JOBS_PER_SQFT", "JOINED_BLOCKS"])
 sales_data.to_csv("sales.csv", index=False, columns=["PARCEL_ID", "RECORDDATE", "SALEDATE", "SALEPRICE", "SALECODE", "DEEDBOOK", "DEEDPAGE", "CHANGENOTICEADDRESS1", "CHANGENOTICEADDRESS2", "CHANGENOTICEADDRESS3", "CHANGENOTICEADDRESS4", "USE", "SALEYEAR", "CLASS", "FINISHEDAREA"])
 parcel_geometry.to_parquet('parcels.parquet')
 market_value.to_parquet('market_value.parquet')

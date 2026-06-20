@@ -71,9 +71,6 @@
 					"alt_id": ["ALT_ID", "string"],
 					"bldg_area_finished_sqft": ["FINISHEDAREA", "float"],
 					"commercial_rent": ["COMMERCIALRENT", "float"],
-					"building_count": ["BUILDING_COUNT", "float"],
-					"building_footprint": ["BUILDING_FOOTPRINT", "float"],
-					"building_height": ["BUILDING_HEIGHT", "float"],
 					"is_pittsburgh_sd": ["IS_PITTSBURGH_SD", "float"],
 					"census_tract": ["CENSUS_TRACT", "string"],
 					"jobs_per_sqft": ["JOBS_PER_SQFT", "float"]
@@ -82,6 +79,7 @@
 			"sales": {
 				"__comment": "Read in the sales data file. This contains all of the sales information from the Allegheny County real estate dataset.",
 				"filename": "sales.csv",
+				"dupes": "$$ref.dupes_key_sale",
 				"load": {
 					"key": ["PARCEL_ID", "string"],
 					"record_date": ["RECORDDATE", "string", "%m-%d-%Y"],
@@ -187,6 +185,20 @@
 				"universe": "$$ref.dupes",
 				"sales": "$$ref.dupes_key_sale"
 			},
+			"invalid_sales": {
+				"__comment": "Second-pass scrub on top of the SALECODE='0 VALID SALE' flag. Allegheny valid improved sales have p1=$8,800; only ~0.12% sit below $5,000, and a 'valid'-coded house selling for <$5k is almost always bad data / a non-arms-length transfer the county code missed. Drop any sale under $1,000 and any improved sale under $5,000 (vacant land can legitimately be cheap, so it is exempt from the $5k floor). The third clause is a RELATIVE rule: an improved sale closing below half the assessor's fair-market total (FAIRMARKETTOTAL) is almost always distressed / non-arms-length (the deepest such sales sit at ~0.33 of the assessor value and ~0.23 of local comps - see the teardown/local-comp investigation). assr_market_value > 0 guards parcels with no assessed total. Thresholds are conservative and tunable.",
+				"enabled": true,
+				"calc": {
+					"__comment": "sale_to_assr_ratio = sale_price / assr_market_value, using zero-safe division (/0 yields 0 when the assessor total is 0/blank, which the assr_market_value>0 guard in the filter excludes from the relative rule).",
+					"sale_to_assr_ratio": ["/0", "sale_price", "assr_market_value"]
+				},
+				"filter": [
+					"or",
+					["<", "sale_price", 1000],
+					["and", ["==", "vacant_sale", false], ["<", "sale_price", 5000]],
+					["and", ["==", "vacant_sale", false], [">", "assr_market_value", 0], ["<", "sale_to_assr_ratio", 0.5]]
+				]
+			},
 			"enrich": {
 				"__comment1": "Join the geometric categories onto the universe.",
 				"geometry": [
@@ -198,13 +210,50 @@
 					"county_council_districts"
 				],
 
+				"__comment_dem": "USGS 3DEP elevation. The steep_slopes spatial layer is City-of-Pittsburgh-only; DEM gives continuous slope/elevation county-wide (incl. the hilly suburbs and river valleys). Adds elevation_mean_ft, elevation_stdev_ft, slope_mean_deg. Requires rasterio + seamless-3dep (in requirements.txt); tiles cache under cache/dem.",
+				"dem": {
+					"enabled": true,
+					"resolution_m": 10
+				},
+
+				"__comment_distances": "Proximity to Pittsburgh's three rivers, other water, and parks (OSM-sourced). proximity_to_* saturates to 0 past max_distance and is the regression-friendly form. Rivers get a wider 2-mile radius; water/parks 1 mile. Downloaded once, then cached.",
+				"distances": {
+					"enabled": true,
+					"rivers": { "enabled": true, "osm": true, "max_distance": 10560, "unit": "ft" },
+					"water": { "enabled": true, "osm": true, "max_distance": 5280, "unit": "ft" },
+					"parks": { "enabled": true, "osm": true, "max_distance": 5280, "unit": "ft", "store_top": true, "top_n": 5 }
+				},
+
+				"__comment_census": "Block-group demographics for Allegheny County (FIPS 42003): median_income, median_c_rent, median_g_rent, total_population. Requires a US Census API key in .env.",
+				"census": {
+					"enabled": true,
+					"fips": "42003"
+				},
+
+				"__comment_overture": "Overture building footprints. The loaded building_footprint/height fields are degenerate (single value), so this supplies a real per-parcel footprint area (bldg_area_footprint_sqft). Cached after first pull.",
+				"overture": {
+					"enabled": true,
+					"cache": true,
+					"footprint": { "units": "sqft" }
+				},
+
 				"__comment2": "spatial_lag computes weighted average of nearby (with a half mile) parcels. This is computed for a few different fields, including sale prices, building quality, building condition, and building age.",
 				"spatial_lag": {
 					"model_groups": {
-						"__comment": "The spatial_lag fields for residential will be based off the values of nearby residential parcels. We are also using nearby residential data for commercial parcels, due to low amounts of data for commercial.",
-						"residential_single_family": {
+						"__comment": "The spatial_lag fields for residential will be based off the values of nearby residential parcels. Single-family is split into Pittsburgh (urban) and suburban submarkets, so each draws its spatial lag from its own submarket (urban rowhouse prices differ sharply from suburban detached). We are also using nearby residential data for commercial parcels, due to low amounts of data for commercial.",
+						"residential_single_family_urban": {
 							"sample_from": [
-								"residential_single_family"
+								"residential_single_family_urban"
+							]
+						},
+						"residential_single_family_suburban_prewar": {
+							"sample_from": [
+								"residential_single_family_suburban_prewar"
+							]
+						},
+						"residential_single_family_suburban": {
+							"sample_from": [
+								"residential_single_family_suburban"
 							]
 						},
 						"residential_multi_family": {
@@ -214,7 +263,9 @@
 						},
 						"commercial": {
 							"sample_from": [
-								"residential_single_family",
+								"residential_single_family_urban",
+								"residential_single_family_suburban_prewar",
+								"residential_single_family_suburban",
 								"residential_multi_family"
 							]
 						}
@@ -240,9 +291,6 @@
 					"vacant_sale"
 				],
 				"zero": [
-					"building_count",
-					"building_footprint",
-					"building_height",
 					"jobs_per_sqft"
 				],
 				"none": [
@@ -279,9 +327,17 @@
 					"flood_zone",
 					"undermined"
 				],
+				"__comment_median_enrichment": "Enrichment numerics are imputed to their median for the small fraction of parcels the enrichment couldn't cover (census block-group misses ~3%, DEM coverage gaps ~1%). Required because mra (statsmodels OLS) rejects any NaN in the design matrix; proximity_to_* and footprint are already 0-filled by their enrichers so they're not listed here.",
 				"median": [
 					"bldg_quality_num",
-					"bldg_condition_num"
+					"bldg_condition_num",
+					"median_income",
+					"median_c_rent",
+					"median_g_rent",
+					"total_population",
+					"elevation_mean_ft",
+					"elevation_stdev_ft",
+					"slope_mean_deg"
 				],
 				"zero_impr": [
 					"lot_area",
@@ -344,9 +400,6 @@
 				"bldg_quality_num",
 				"bldg_condition_num",
 				"commercial_rent",
-				"building_count",
-				"building_footprint",
-				"building_height",
 				"jobs_per_sqft",
 				"market_value_category",
 				"spatial_lag_bedroom_density",
@@ -364,16 +417,29 @@
 			]
 		},
 		"metadata": {
-			"__comment": "The model is built using sales going back to 2021, but only sales since 2025 are used for testing the model and running ratio studies.",
+			"__comment": "Training reaches back to 2022 (post-2020 market regime); only sales since 2025 are used for testing / ratio studies (IAAO 1-year window).",
+			"__comment_use_sales_from": "Per-model-group windows: 'default' applies to every group; 'by_model_group' overrides. The big suburban-rest group floods (~5.4k valid sales/yr) so it gets the leanest 2023 window (still ~16k sales); the smaller SF groups keep 2022. Commercial is data-starved (only ~670 valid sales 2016-2025 countywide) so it reaches back to 2016 to scrape together enough — this is exactly why windows are per-group. The cleaning/clip stages keep the FLOOR (min across all windows = 2016 here, driven by commercial) and the per-group narrowing happens at the train/test split, so residential still trains on recent sales only. (Commercial is skip:['all'] for now; the window is set correctly for when it's enabled.)",
 			"valuation_date": "2026-01-01",
-			"use_sales_from": 2021,
+			"use_sales_from": {
+				"default": 2022,
+				"by_model_group": {
+					"residential_single_family_suburban": 2023,
+					"commercial": 2016
+				}
+			},
 			"test_sales_from": 2025
 		},
 		"instructions": {
 			"__comment": "This is where the models actually get run to generate predictions. We run a few different models and combine them to get the final assessments.",
 			"__comment2": "'assessor' just takes the existing assessments (this is just included for comparison purposes and will not be included in the final predictions). 'mra' is a standard regression. 'local_area' and 'spatial_lag_area' are simple models that try to predict values based on nearby sale prices per square foot. 'lightgbm', 'xgboost', and 'catboost' are machine learning decision tree models. 'gwr' is gradient-weighted regression.",
 			"main": {
-				"run": ["assessor", "mra", "local_area", "spatial_lag_area", "lightgbm", "xgboost"]
+				"run": ["assessor", "mra", "multi_mra", "local_area", "spatial_lag_area", "lcomp", "xgboost", "lightgbm"],
+				"__run":["lcomp", "xgboost", "lightgbm", "catboost", "ngboost"],
+				"__comment_ensemble": "Blend the run models (excluding 'assessor', which is comparison-only) into a single ensemble; 'default' is the built-in mean/median blend. The published market_value is taken from this ensemble via models.prediction below, rather than being left implicit.",
+				"ensemble": { "type": "default" },
+				"skip":{
+					"__comment": "Fast-iteration mode: model ONLY residential_single_family_suburban_prewar (smallest detached SF group; transfers to the big suburban group). Remove urban/suburban from this list to model all SF groups again."
+				}
 			},
 			"time_adjustment": {
 				"period": "Q"
@@ -381,7 +447,9 @@
 			"model_group_order": [
 				"commercial",
 				"residential_multi_family",
-				"residential_single_family"
+				"residential_single_family_urban",
+				"residential_single_family_suburban_prewar",
+				"residential_single_family_suburban"
 			],
 			"feature_selection": {
 				"thresholds": {
@@ -392,41 +460,118 @@
 		"models": {
 			"__comment": "This is where we choose which variables to include when running the models.",
 			"main": {
+				"__comment_ind_vars": "ind_vars feed the linear (mra/multi_mra) and lcomp models; the nearest-neighbor models (local_area/spatial_lag_area) ignore them. Lists are per-group. Topo/water signal comes from COUNTY-WIDE continuous fields, which dominated the binary WPRDC flags head-to-head: DEM slope_mean_deg/elevation_mean_ft replaced steep_slope, and proximity_to_osm_rivers/water replaced flood_zone (flood_zone was a noisy waterfront proxy; AE-zone parcels are actually high-value riverfront). undermined (mine subsidence) is kept urban-only -- it's a distinct signal nothing else captures. proximity_to_osm_parks was dropped (no signal). building_count/footprint/height dropped (degenerate). Linear models auto-reduce via feature_selection, so a generous list is safe.",
 				"commercial": {
 					"default": {
 						"ind_vars": [
 							"land_area_sqft",
 							"commercial_rent",
-							"building_footprint",
-							"building_height",
 							"jobs_per_sqft",
+							"bldg_area_footprint_sqft",
+							"slope_mean_deg",
+							"proximity_to_osm_rivers",
+							"median_income",
 							"spatial_lag_sale_price_time_adj"
 						]
-					}
+					},
+					"lcomp": { "ind_vars": "$$ref.ind_vars_tree_commercial" },
+					"xgboost":  { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree_commercial" },
+					"lightgbm": { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree_commercial" },
+					"ngboost":  { "n_trials": 15, "ind_vars": "$$ref.ind_vars_tree_commercial" },
+					"catboost": { "n_trials": 5, "use_gpu": false, "ind_vars": "$$ref.ind_vars_tree_commercial" }
 				},
 				"residential_multi_family": {
 					"default": {
 						"ind_vars": [
 							"land_area_sqft",
-							"bldg_year_built",
 							"finished_living_area_sqft",
+							"bldg_age_years",
 							"bldg_quality_num",
 							"bldg_condition_num",
+							"slope_mean_deg",
+							"proximity_to_osm_rivers",
+							"median_income",
 							"spatial_lag_sale_price_time_adj"
 						]
-					}
+					},
+					"lcomp": { "ind_vars": "$$ref.ind_vars_tree" },
+					"xgboost":  { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree" },
+					"lightgbm": { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree" },
+					"ngboost":  { "n_trials": 15, "ind_vars": "$$ref.ind_vars_tree" },
+					"catboost": { "n_trials": 5, "use_gpu": false, "ind_vars": "$$ref.ind_vars_tree" }
 				},
-				"residential_single_family": {
+				"residential_single_family_urban": {
+					"__comment": "City of Pittsburgh: rowhouse/old stock; building typology + condition matter. undermined (mine subsidence) + MVA category are City-of-Pittsburgh signals available only here. steep_slope and flood_zone are intentionally NOT listed: the continuous county-wide DEM slope/elevation and OSM rivers/water proximity (all in every group's list) dominate those binary WPRDC flags head-to-head, so they carry slope and waterfront instead.",
 					"default": {
 						"ind_vars": [
 							"land_area_sqft",
-							"bldg_year_built",
 							"finished_living_area_sqft",
+							"bldg_age_years",
 							"bldg_quality_num",
 							"bldg_condition_num",
+							"slope_mean_deg",
+							"proximity_to_osm_rivers",
+							"median_income",
 							"spatial_lag_sale_price_time_adj"
 						]
-					}
+					},
+					"lcomp": { "ind_vars": "$$ref.ind_vars_tree" },
+					"xgboost":  { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree" },
+					"lightgbm": { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree" },
+					"ngboost":  { "n_trials": 15, "ind_vars": "$$ref.ind_vars_tree" },
+					"catboost": { "n_trials": 5, "use_gpu": false, "ind_vars": "$$ref.ind_vars_tree" }
+				},
+				"residential_single_family_suburban_prewar": {
+					"__comment_log": "mra and multi_mra train on LOG(price) for this group (log:true) so the linear models cannot predict negative values for expensive/atypical homes; each model exponentiates its own predictions back to price space, so metrics/ensemble are unaffected. Other engines (assessor/local_area/spatial_lag_area/lcomp) ignore this flag and stay in price space. To turn off, set log:false or remove these entries.",
+					"mra": { "log": true },
+					"multi_mra": { "log": true },
+					"__comment": "Suburban pre-war (inner-ring boroughs, ~1920 stock): condition/renovation- and location-driven. Same feature menu as suburban-rest EXCEPT 'style' is dropped here: this group is defined by style='16 OLD STYLE', so style is constant -- a dead feature for the linear model. (The shared tree list still lists it; it's a harmless constant for trees and useful for the other groups.)",
+					"default": {
+						"ind_vars": [
+							"land_area_sqft",
+							"finished_living_area_sqft",
+							"bldg_age_years",
+							"bldg_quality_num",
+							"bldg_condition_num",
+							"slope_mean_deg",
+							"proximity_to_osm_rivers",
+							"median_income",
+							"spatial_lag_sale_price_time_adj"
+						]
+					},
+					"lcomp": { "ind_vars": "$$ref.ind_vars_tree" },
+					"__comment_trees": "Tree/ensemble models (gradient-boosted xgboost/lightgbm/catboost, plus ngboost which also yields a per-parcel prediction_std). All share the wide kitchen-sink ind_vars_tree list (same as lcomp) - trees tolerate redundancy/collinearity and NaNs, so no fill rules or lean lists needed; they stay in PRICE space (no log flag - trees do not extrapolate negative). n_trials is the Optuna search budget per model (deterministic + crash-resumable). catboost is by far the slowest (CPU-only here for reproducibility; GPU catboost is non-deterministic) - lower its n_trials or remove it if iteration gets slow.",
+					"xgboost":  { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree" },
+					"lightgbm": { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree" },
+					"ngboost":  { "n_trials": 15, "ind_vars": "$$ref.ind_vars_tree" },
+					"catboost": { "n_trials": 5, "use_gpu": false, "ind_vars": "$$ref.ind_vars_tree" }
+				},
+				"residential_single_family_suburban": {
+					"__comment": "Suburban post-war detached (the bulk, ~1960 stock): size/room/bath/garage-driven, more uniform.",
+					"default": {
+						"ind_vars": [
+							"land_area_sqft",
+							"finished_living_area_sqft",
+							"bldg_age_years",
+							"bldg_quality_num",
+							"bldg_condition_num",
+							"slope_mean_deg",
+							"proximity_to_osm_rivers",
+							"median_income",
+							"spatial_lag_sale_price_time_adj"
+						]
+					},
+					"lcomp": { "ind_vars": "$$ref.ind_vars_tree" },
+					"xgboost":  { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree" },
+					"lightgbm": { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree" },
+					"ngboost":  { "n_trials": 15, "ind_vars": "$$ref.ind_vars_tree" },
+					"catboost": { "n_trials": 5, "use_gpu": false, "ind_vars": "$$ref.ind_vars_tree" }
+				}
+			},
+			"prediction": {
+				"__comment": "Where each published value comes from. market_value = the 'main' ensemble (the mean/median blend of the run models). No land_value entry yet because there is no vacant/land flow configured.",
+				"default": {
+					"market_value": { "type": "main", "model": "ensemble" }
 				}
 			}
 		},
@@ -440,9 +585,19 @@
 				"name": "Residential Multi Family",
 				"filter": ["or", "$$ref.filters.residential_multi_family"]
 			},
-			"residential_single_family": {
-				"name": "Residential Single Family",
-				"filter": ["or", "$$ref.filters.residential_single_family"]
+			"__comment_sf_split": "Single-family is split via is_pittsburgh_sd into the City of Pittsburgh school district (urban, rowhouse/townhouse-heavy, ~104k) vs the surrounding suburbs (~376k). Suburban is split again on building typology: pre-war detached stock (STYLE '16 OLD STYLE', median year built 1920, ~$48/sqft) is carved out from the rest (post-war detached + attached + vacant, ~$94/sqft). The pre-war cut is justified empirically: STYLE is 99.97% populated and OLD STYLE is 98% built before 1945, and the two eras are strongly regionally segregated (83% of suburban detached sit in neighborhoods that are >=70% one era; inner-ring boroughs ~65-76% old vs outer suburbs ~2-4% old). Every SF parcel carries is_pittsburgh_sd in {0,1} (no NaN). The 'suburban' group is the residual (everything suburban NOT pre-war-detached), so the three SF groups partition the old residential_single_family group exactly.",
+			"residential_single_family_urban": {
+				"name": "Residential Single Family (Pittsburgh)",
+				"filter": ["and", "$$ref.filters.residential_single_family", ["==", "is_pittsburgh_sd", 1]]
+			},
+			"__comment_na_safe": "use isin/notin (not ==/not), because 'style' is a nullable dtype: ==/!= return <NA> (Kleene logic) for null style and that NA propagates through 'not', dropping null-style parcels into UNKNOWN. isin->False / notin->True for null, so a null-style suburban 010 parcel cleanly lands in the residual 'suburban' group. The two suburban filters are exact complements over (is_pittsburgh_sd==0 AND SF), so they partition exhaustively regardless of null style.",
+			"residential_single_family_suburban_prewar": {
+				"name": "Residential Single Family (Suburban Pre-War)",
+				"filter": ["and", "$$ref.filters.residential_single_family", ["==", "is_pittsburgh_sd", 0], ["isin", "use", ["010 SINGLE FAMILY"]], ["isin", "style", ["16 OLD STYLE"]]]
+			},
+			"residential_single_family_suburban": {
+				"name": "Residential Single Family (Suburban)",
+				"filter": ["and", "$$ref.filters.residential_single_family", ["==", "is_pittsburgh_sd", 0], ["or", ["notin", "use", ["010 SINGLE FAMILY"]], ["notin", "style", ["16 OLD STYLE"]]]]
 			}
 		}
 	},
@@ -463,6 +618,13 @@
 		"sales_scrutiny": {
 			"location": "neighborhood",
 			"deed_id": "deed_id"
+		},
+		"__comment_equity": "land_equity / impr_equity come from the settings template (which omits 'location'); give them a location so the equity clusters group by neighborhood, matching horizontal_equity and sales_scrutiny. (The template's *_sqm fields don't exist in this imperial locality and are harmlessly skipped.)",
+		"land_equity": {
+			"location": "neighborhood"
+		},
+		"impr_equity": {
+			"location": "neighborhood"
 		}
 	},
 	"field_classification": {
@@ -490,9 +652,20 @@
 		},
 		"__comment1": "This section indicates the data type for each variable, as well as whether it's a characteristic of the land or of the building (this distinction is mainly relevant for the vacant land analysis module, which we are not currently using)",
 		"land": {
+			"__comment_enrichment_numeric": "elevation/slope (DEM), proximity_to_osm_* (distances), median_income/rents + total_population (census) are added by enrichment. Classified here explicitly because this 'numeric' list replaces (not merges with) the template's, so the DEM auto-classification would otherwise be lost.",
 			"numeric": [
 				"commercial_rent",
-				"is_pittsburgh_sd"
+				"is_pittsburgh_sd",
+				"elevation_mean_ft",
+				"elevation_stdev_ft",
+				"slope_mean_deg",
+				"proximity_to_osm_rivers",
+				"proximity_to_osm_water",
+				"proximity_to_osm_parks",
+				"median_income",
+				"median_c_rent",
+				"median_g_rent",
+				"total_population"
 			],
 			"categorical": [
 				"market_value_category",
@@ -515,24 +688,53 @@
 				"full_baths",
 				"half_baths",
 				"basement_garage",
+				"fireplaces",
 				"finished_living_area_sqft",
 				"bldg_quality_num",
 				"bldg_condition_num",
-				"building_count",
-				"building_footprint",
-				"building_height",
-				"jobs_per_sqft"
+				"jobs_per_sqft",
+				"bldg_area_footprint_sqft"
 			],
+			"__comment_dropped_numeric": "building_count / building_footprint / building_height removed: degenerate (a single distinct value, and building_height ~0-20% populated). county_impr_value / local_building_assessed / assr_impr_value are assessor OUTPUTS, not parcel characteristics -- kept classified for equity studies but do NOT add them to model ind_vars (leakage).",
 			"categorical": [
 				"basement_desc",
 				"quality_grade",
 				"condition",
 				"cdu_grade",
-				"heating_cooling"
+				"heating_cooling",
+				"style",
+				"exterior_finish",
+				"roof_desc"
 			]
 		}
 	},
 	"ref": {
+		"__comment_ind_vars_tree": "Wide 'kitchen-sink' ind_vars for the tree/ensemble archetype (lcomp now; xgboost/lightgbm/catboost if enabled). Trees tolerate redundancy/collinearity, so this layers the string ordinal grades, the full spatial_lag suite, and extra census fields on top of what the lean linear 'default' uses. Deliberately NO high-cardinality location categoricals (neighborhood/census_tract/municipality): location comes from lat/long + spatial_lag_sale_price, which is safe for one-hot engines like lcomp. 'undermined' is included but is informative only for the Pittsburgh urban group (constant elsewhere -> trees ignore it).",
+		"ind_vars_tree": [
+			"land_area_sqft", "finished_living_area_sqft", "bldg_area_footprint_sqft",
+			"bldg_quality_num", "bldg_condition_num", "bldg_age_years",
+			"full_baths", "half_baths", "bldg_rooms_bed", "total_rooms", "stories", "basement_garage", "fireplaces",
+			"style", "exterior_finish", "basement_desc", "heating_cooling",
+			"quality_grade", "condition", "cdu_grade",
+			"market_value_category", "undermined",
+			"latitude_norm", "longitude_norm",
+			"median_income", "median_c_rent", "median_g_rent", "total_population",
+			"elevation_mean_ft", "elevation_stdev_ft", "slope_mean_deg",
+			"proximity_to_osm_rivers", "proximity_to_osm_water",
+			"spatial_lag_sale_price_time_adj", "spatial_lag_sale_price_time_adj_impr_sqft",
+			"spatial_lag_bldg_quality_num", "spatial_lag_bldg_condition_num", "spatial_lag_bldg_age_years",
+			"spatial_lag_land_area_sqft", "spatial_lag_floor_area_ratio", "spatial_lag_bedroom_density"
+		],
+		"ind_vars_tree_commercial": [
+			"land_area_sqft", "finished_living_area_sqft", "bldg_area_footprint_sqft",
+			"commercial_rent", "jobs_per_sqft", "market_value_category",
+			"latitude_norm", "longitude_norm",
+			"median_income", "median_c_rent", "median_g_rent", "total_population",
+			"elevation_mean_ft", "elevation_stdev_ft", "slope_mean_deg",
+			"proximity_to_osm_rivers", "proximity_to_osm_water",
+			"spatial_lag_sale_price_time_adj", "spatial_lag_sale_price_time_adj_impr_sqft",
+			"spatial_lag_land_area_sqft", "spatial_lag_floor_area_ratio"
+		],
 		"filters": {
 			"__comment": "These are the definitions for our model groups",
 			"residential_single_family":  ["and",
