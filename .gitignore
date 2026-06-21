@@ -1,0 +1,20 @@
+# Pipeline logs
+logs/
+*.log
+
+# Symlinks to logs (created by run scripts)
+run_01_stdout.log
+run_01_stderr.log
+run_02_stdout.log
+run_02_stderr.log
+run_03_stdout.log
+run_03_stderr.log
+
+# Large data inputs/outputs
+data/
+output/
+
+# Python
+__pycache__/
+*.py[cod]
+.env
