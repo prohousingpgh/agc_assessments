@@ -13,8 +13,8 @@ Allgheny County parcel GeoJSON: https://www.pasda.psu.edu/uci/DataSummary.aspx?d
 Allgheny County census tract GeoJSON: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-census-tracts-2020<br>
 Allegheny County census block boundaries: https://data.wprdc.org/dataset/allegheny-county-census-blocks-2021<br>
 Allegheny County jobs by census block: https://lehd.ces.census.gov/data/#lodes<br>
-Building heights and footprints: https://public.tableau.com/views/GlobalMLBuildingFootprintsDataWithEstimatedHeight/GlobalMLBuildingFootprints.<br>
-For heights and footprints, users may need to download a few files to get all of Allegheny County. Unzip these files and put the raw csvs under agc_assessments/building_footprints. <br>
+Pittsburgh Undermined overlay (Pittsburgh only, not the whole county - will be ignored for modeling outside of Pittsburgh): https://data.wprdc.org/dataset/undermined-areas<br>
+Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
 Run this script, which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
 python scripts/getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson
 
@@ -24,28 +24,24 @@ County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/Al
 
 The following data input files are not currently used in our assessment analysis. However, they are converted into OpenAVMKit-compatible files by our pre-processing script, and could easily be added to our models in the future:<br>
 Allgheny County market value categories: https://data.wprdc.org/dataset/market-value-analysis-2021<br>
-Pittsburgh Steep slopes overlay: https://data.wprdc.org/dataset/25-or-greater-slope<br>
 Pittsburgh Flood zones: https://data.wprdc.org/dataset/2014-fema-flood-zones<br>
-Pittsburgh Undermined overlay: https://data.wprdc.org/dataset/undermined-areas<br>
-Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
-Note that the steep slopes, flood zone, and undermined overlays are for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis. <br>
+Note that the flood zone overlay is for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis. <br>
 Commercial parcel data can be obtained by extracting json responses from the search page of Crexi (https://www.crexi.com/search). These responses can be combined into a csv using this script: <br>
 python scripts/processCrexiData.py
 
 # Convert Data into Usuable Format
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
-python scripts/OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson slopes.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv city_council_districts_2022.geojson County_Council_Districts_-7561056125954294637.geojson census_blocks_2020.geojson pa_wac_S000_JT00_2023.csv
+python scripts/OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv city_council_districts_2022.geojson County_Council_Districts_-7561056125954294637.geojson census_blocks_2020.geojson pa_wac_S000_JT00_2023.csv
 
-This should generate 9 files:<br>
+This should generate 8 files:<br>
 parcels.csv<br>
 sales.csv<br>
 parcels.parquet<br>
+undermined.parquet
 city_council_districts.parquet (currently only used for reports/results analysis)<br>
 county_council_districts.parquet (currently only used for reports/results analysis)<br>
 market_value.parquet (currently not used for modeling)<br>
-steep_slopes.parquet (currently not used for modeling)<br>
 flood_zones.parquet (currently not used for modeling)<br>
-undermined.parquet (currently not used for modeling)
 
 # OpenAvmKit settings
 
@@ -75,8 +71,8 @@ This is where the data gets processed, joined together, and loaded into datafram
 This controls how the assessment is actually performed.
 - "try_variables" is for testing the significance of different possible variables. It does not impact the final models/results and is just a tool for determining the best variables for the model.
 - "model_groups" defines the actual model groups. Parcels will be split into groups (i.e. commercial, single-family, multi-family) for both modeling and result analysis. 
-- "instructions" defines the algorithms (regression, decsision tree, etc) to use for each model group. Currently, we are using linear regression ("mra"), spatial models ("local_area", "spatial_lag_area"), and decision tree models ("lightgbm","xgboost") across all model groups.
-- "models" specifies which variables to use in the models. We use "land_area_sqft", "bldg_year_built", "finished_living_area_sqft", "bldg_quality_num", "building_condition_num", and "spatial_lag_sale_price_time_adj" for residential parcels. We use "land_area_sqft", "commercial_rent", "building_footprint", "building_height", "jobs_per_sqft", and "spatial_lag_sale_price_time_adj" for commercial parcels. These variables are in the "universe" dataframe.
+- "instructions" defines the algorithms (regression, decsision tree, etc) to use for each model group. Currently, we are using linear regression ("mra" - single set of params for the whole model group, "multi_mra" - different sets of params for different location-based subsets of parcels), spatial models ("local_area", "spatial_lag_area"), and decision tree models ("lcomp", "lightgbm", "xgboost") across all model groups.
+- "models" specifies which variables to use in the models.
 - "analysis" and "field_classification" are used for ratio studies/results analysis.
 
 ### "ref"
@@ -97,7 +93,6 @@ notebooks/<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── flood_zones.parquet<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── market_value.parquet<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── parcels.parquet<br>
-&emsp;&emsp;&emsp;&emsp;&emsp;  ├── steep_slopes.parquet<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;  ├── undermined.parquet<br>
 &emsp;&emsp;&emsp;&emsp; ├── parcels.csv<br>
 &emsp;&emsp;&emsp;&emsp; ├── sales.csv<br>
