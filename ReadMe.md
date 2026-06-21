@@ -34,7 +34,7 @@ python scripts/processCrexiData.py
 
 # Convert Data into Usuable Format
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
-python scripts/OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson slopes.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv city_council_districts_2022.geojson County_Council_Districts_-7561056125954294637.geojson census_blocks_2020.geojson pa_wac_S000_JT00_2023.csv
+python scripts/OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson slopes.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson city_council_districts_2022.geojson County_Council_Districts_-7561056125954294637.geojson census_blocks_2020.geojson pa_wac_S000_JT00_2023.csv
 
 This should generate 9 files:<br>
 parcels.csv<br>
@@ -67,7 +67,7 @@ This is where the input files get loaded.
 
 This is where the data gets processed, joined together, and loaded into dataframes.
 - The "merge" section creates 2 dataframes - "universe" and "sales". "universe" contains parcel data (including commercial rents) and "sales" contains sales data - any additional datasets should be added to these lists, and would be joined using the aforementioned "key" attribute.
-- "enrich" allows you to perform additional calculations and merge additional geometric data onto your dataframes. We are attaching all of the data from our parquet files here with a geometric join. This section also supports OpenStreetMap integration - you can configure it to use OpenStreetMap to compute distances from amenities like parks, schools, bodies of water, etc. and add that to the dataframe. We do not currently do that.
+- "enrich" allows you to perform additional calculations and merge additional geometric data onto your dataframes. We are attaching all of the data from our parquet files here with a geometric join. This section also supports OpenStreetMap integration - you can configure it to use OpenStreetMap to compute distances from amenities like parks, schools, bodies of water, etc. and add that to the dataframe. We currently use it to compute proximity to water bodies (rivers and streams), which feeds the models as `proximity_to_osm_water`. Elevation/slope is similarly enriched from a DEM as `slope_mean_deg`.
 - "fill" allows you to control null handling - you can choose to fill in with zeros, "None", the median or mode value for that field, etc. You can also split the handling for vacant vs improved parcels.
 
 ### "modeling"
