@@ -640,7 +640,7 @@
 				{"by": "bldg_year_built", "slice_size": 10},
 				{"by": "land_area_sqft", "quantiles":  10},
 				{"by": "median_income", "quantiles": 5},
-				{"by": "pct_minority", "quantiles": 5},
+				{"by": "pct_minority", "bins": [0, 0.1, 0.25, 0.5, 0.75, 1.0], "bin_labels": ["0-10%", "10-25%", "25-50%", "50-75%", "75-100%"]},
 				{"by": "<loc_neighborhood>"},
 				{"by": "<loc_market_area>"},
 				{"by": "<loc_region>"}
