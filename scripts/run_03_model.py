@@ -109,7 +109,13 @@ sup = from_checkpoint(
     "3-model-02a-train-predict",
     finalize_models,
     {"sup": sup, "settings": load_settings(),
-     "run_main": True, "run_vacant": False, "verbose": verbose},
+     "run_main": True, "run_vacant": False, "verbose": verbose,
+     # Defer the slow SHAP/contribution generation out of the training pass.
+     # Contributions are only computed in Step 9 below, and only when
+     # DO_SHAPS=True. Without this, finalize_models defaults to
+     # do_contributions=True and computes them anyway (the bug that made the
+     # 2026-06-21 run run for 50+ min and get killed by Modern Standby).
+     "do_contributions": False},
 )
 
 if DO_SHAPS:
