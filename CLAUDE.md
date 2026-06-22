@@ -178,6 +178,14 @@ candidates; the equity-sensitive ones (census.py, data.py) must NOT be PR'd publ
   `residential_single_family_suburban_prewar`, `residential_single_family_suburban`.
 - `mra` + `multi_mra` use `"log": true` in **all** residential groups (fixes OLS
   reversion-to-mean / negative VEI; prewar was the last to get it).
+- **`log:true` vs `params.csv` scale (verified 2026-06-22, `openavmkit/modeling.py` ~1458):**
+  with `log:true` the linear engine fits `log(price)` and `np.exp()`s its predictions, but
+  the per-engine `out/models/<group>/main/mra/params.csv` reports **dollar-scale (level) OLS
+  coefficients** (intercepts are large negatives — e.g. urban −1.37 M; living area ~$100/sqft).
+  So the report's `coef_tables.tex` reads as marginal dollar effects, distinct from the
+  log-form engine the ensemble blends — **do not describe those coefficients as log-scale.**
+  `params.csv` lists only the continuous terms (the `market_value_category_*` / `cdu_grade_*`
+  dummies are dropped from that summary).
 - Residential linear `ind_vars` include census `median_income`, `median_g_rent`, and the
   PCRG MVA tier `market_value_category` (categorical) — **kept on condition of equity
   testing** (ratio-study breakdowns by income quintile, and `pct_minority` once enriched).
@@ -206,17 +214,29 @@ LaTeX report modeled on Pro-Housing Pittsburgh's reassessment PDF, with an added
 equity-analysis section. **Hard rule (user): no hardcoded numbers in the document** —
 every figure, table, and inline statistic is generated from the pipeline outputs. Two
 generators feed `report.tex` (which only `\input`s / `\includegraphics`es them):
-- `build_report.py` → `generated/macros.tex` + results/equity tables. Reads the per-group
+- `build_report.py` → `generated/{macros.tex, results_table.tex, equity_income.tex,
+  equity_minority.tex, audit_table.tex, coef_tables.tex}`. Reads the per-group
   `out/models/<group>/reports/ratio_study.md`, the ensemble pickles (VEI via
-  `get_vertical_equity_scores`), and the published `output/` CSVs.
-- `build_figures.py` → `figures/*.png` — five census-tract choropleths (sales ratio
-  existing/new, land value existing/new, valuation ratio). Reads the ensemble pickles'
-  `df_sales`/`df_universe` + `output/census_tract_land_price_per_sqft.csv`.
+  `get_vertical_equity_scores`), the published `output/` CSVs, the 100-parcel
+  `output/allegheny_county_parcel_data_sanity_check.csv` (data-quality audit table), and each
+  group's `out/models/<group>/main/mra/params.csv` (per-group linear coefficient tables).
+- `build_figures.py` → `figures/*.png` — **nine** figures: five census-tract choropleths
+  (sales ratio existing/new, land value existing/new, valuation ratio) + four
+  valuation-ratio-by-jurisdiction views (city- and county-council choropleths;
+  school-district and municipality ranked bar charts). Reads the ensemble pickles'
+  `df_sales`/`df_universe`, `output/census_tract_land_price_per_sqft.csv`, the district
+  GeoJSONs in `data/`, and the `output/*_valuation_ratios.csv` district CSVs.
 
 Build: `python report/build_report.py && python report/build_figures.py` then the 4-pass
-`pdflatex … bibtex … pdflatex … pdflatex` (compiles to ~9 pp, 0 overfull). `generated/`,
+`pdflatex … bibtex … pdflatex … pdflatex` (compiles to ~18 pp, 0 overfull, 0 undefined refs;
+`placeins`/`\FloatBarrier` keeps figures from drifting past the references). `generated/`,
 `figures/`, and build artifacts are gitignored — regenerate from data; only the source
-(`.tex`, the two `.py`, `.bib`, README) is tracked.
+(`.tex`, the two `.py`, `.bib`, README) is tracked. The report now carries the original
+Pro-Housing Pittsburgh PDF's policy content adapted to the current models: tax-bill effects
+(+ Explorer app), dataset-quality audit, cost estimate, the Berry 2024 external check, an
+expanded background, and a technical appendix with per-group coefficient tables. **External
+facts (vendor quotes, Berry's PRD/COD, legislative detail) are prose+citation; only the
+analysis numbers are generated** — both satisfy the no-hardcoded-numbers rule.
 
 **Map data quirks (verified):**
 - **Census-tract join:** `df_sales`/`df_universe` `census_tract` is the bare tract number
@@ -229,3 +249,14 @@ Build: `python report/build_report.py && python report/build_figures.py` then th
   limitation, disclosed in the figure annotation + §5.2, not a bug.
 - **Valuation ratio (new ÷ current) is > 1 almost everywhere** (county under-assesses ~2×), so
   diverging maps of it are centered on the **county median**, not 1.0.
+- **District figures (jurisdiction breakdown):** city- and county-council districts have
+  geometry (`data/city_council_districts_2022.geojson`, join `DIST_NAME`=`D1..D9`;
+  `data/county_council_districts.geojson`, join `LABEL`=`District 1..13`) → choropleths.
+  Municipality (131) and school district (46) have **no geometry in the repo** → ranked
+  horizontal bar charts instead. The published `output/*_valuation_ratios.csv` values are
+  already normalized so **1.0 = the county-typical increase** (center the diverging scale /
+  bar reference on 1.0, not the raw ~2× ratio).
+- **`\countyUnderRatio` (≈2.08) is the dollar-weighted aggregate** (Σnew/Σcurrent from
+  `residential_predictions.csv`), **not a median** — describe it as the new-to-current ratio /
+  factor, not the "county-wide median" valuation ratio (the per-tract map centers white on the
+  true median, a different number).
