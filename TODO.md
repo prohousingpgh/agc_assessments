@@ -36,16 +36,18 @@ facts and `README` for current results. Status as of 2026-06-22.
 
 ## Deliverable
 
-- [~] **LaTeX report** — first draft done in `report/` (compiles to 6 pp; 0 errors/overfull),
+- [~] **LaTeX report** — draft in `report/` (compiles to 9 pp with maps; 0 errors/overfull),
   modeled on `drafts/2026-06-15 Allegheny_County_Reassessment.pdf` + adds an equity-analysis
   section. **No hardcoded numbers**: `report/build_report.py` generates `generated/macros.tex` +
-  the results/equity tables from the pipeline outputs, and `report.tex` `\input`s them. Build:
-  `python report/build_report.py` then `pdflatex report && bibtex report && pdflatex report &&
-  pdflatex report` (see `report/README.md`). Preamble follows the global CLAUDE.md rules.
-  Remaining:
-  - [ ] **Choropleth figures** — run the pipeline's `make_maps.py`, copy the referenced PNGs
-    (`median_sales_ratio_*`, `land_value_*`, `valuation_ratio_*`) into `report/figures/` (the
-    report auto-fills them via `\IfFileExists`; shows placeholder boxes until then).
+  the results/equity tables and `report/build_figures.py` generates the `figures/*.png` maps, all
+  from the pipeline outputs; `report.tex` `\input`s / `\includegraphics`es them. Build:
+  `python report/build_report.py && python report/build_figures.py` then
+  `pdflatex report && bibtex report && pdflatex report && pdflatex report` (see `report/README.md`).
+  Preamble follows the global CLAUDE.md rules. Remaining:
+  - [x] **Choropleth figures** — done. `build_figures.py` generates 5 census-tract choropleths
+    (sales ratio existing/new, land value existing/new, valuation ratio) from the ensemble
+    pickles + the published land CSV. (New-land map covers only ~88 tracts — the published land
+    model is limited to tracts with enough vacant-land sales; disclosed in the figure + text.)
   - [ ] **Bibliography** — 2 entries now (IAAO, OpenAVMKit); the source PDF cites ~17. Expand
     `report/references.bib` + add `\citep`s (history, the reassessment bill, etc.).
   - [ ] **Authorship** — confirm/adjust (placeholder: "Russell Richie / Pro-Housing Pittsburgh,
