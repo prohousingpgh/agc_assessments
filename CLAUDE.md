@@ -28,6 +28,9 @@ when a pitfall here is under-documented.
   the library). Present in `run_03_model.py`; ensure it's in any new pipeline script.
 - **Census API key** lives in `.env` as `CENSUS_API_KEY` (gitignored). Required for Stage 1
   census enrichment.
+- **The README is tracked as `ReadMe.md` (mixed case).** On Windows' case-insensitive
+  filesystem, `git add README.md` silently stages nothing (the index path is `ReadMe.md`) — the
+  edit lands on disk but never reaches the commit. Always `git add ReadMe.md` with the real case.
 
 ## Editing settings.json (CRLF + tabs + BOM)
 
