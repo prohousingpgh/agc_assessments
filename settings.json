@@ -508,8 +508,7 @@
 					"catboost": { "n_trials": 5, "use_gpu": false, "ind_vars": "$$ref.ind_vars_tree" }
 				},
 				"residential_single_family_suburban_prewar": {
-					"__comment_log": "mra and multi_mra train on LOG(price) for this group (log:true) so the linear models cannot predict negative values for expensive/atypical homes; each model exponentiates its own predictions back to price space, so metrics/ensemble are unaffected. Other engines (assessor/local_area/spatial_lag_area/lcomp) ignore this flag and stay in price space. To turn off, set log:false or remove these entries.",
-					"mra": { "log": true },
+					"__comment_log": "multi_mra trains on LOG(price) for this group (log:true) so the linear models cannot predict negative values for expensive/atypical homes; each model exponentiates its own predictions back to price space, so metrics/ensemble are unaffected. Other engines (assessor/local_area/spatial_lag_area/lcomp) ignore this flag and stay in price space. To turn off, set log:false or remove these entries.",
 					"multi_mra": { "log": true },
 					"__comment": "Suburban pre-war (inner-ring boroughs, ~1920 stock): condition/renovation- and location-driven.",
 					"default": {
@@ -532,7 +531,7 @@
 					"catboost": { "n_trials": 5, "use_gpu": false, "ind_vars": "$$ref.ind_vars_tree" }
 				},
 				"residential_single_family_suburban": {
-					"__comment": "Suburban post-war detached (the bulk, ~1960 stock): size/room/bath/garage-driven, more uniform.",
+					"__comment": "Suburban post-war detached (the bulk, ~1960 stock): size-driven, more uniform.",
 					"default": {
 						"ind_vars": [
 							"land_area_sqft",
@@ -540,7 +539,6 @@
 							"bldg_age_years",
 							"bldg_quality_num",
 							"bldg_condition_num",
-							"basement_garage",
 							"slope_mean_deg",
 							"proximity_to_osm_rivers",
 							"median_income",
