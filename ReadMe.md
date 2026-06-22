@@ -92,6 +92,10 @@ python scripts/run_reensemble.py --apply
 
 # Optional: combine outputs into the published output/ CSVs
 python scripts/combineOutputFiles.py
+
+# Optional: build the PDF report (every number + map generated from the outputs above)
+python report/build_report.py && python report/build_figures.py   # -> macros/tables + maps
+cd report && pdflatex report && bibtex report && pdflatex report && pdflatex report
 ```
 
 SHAP/contribution generation is **off by default** (`DO_SHAPS=False` in `run_03_model.py`) and should stay off for metric/equity iteration — it is only needed for a final publication run (explainability / IAAO narrative).
