@@ -62,24 +62,46 @@ and the **stale cached result is served silently** — your code change does not
 `clear_cache()` itself is buggy (malformed `.cols`/`.rows` paths, ~line 160), so it does not
 reliably remove these — **delete the files manually.**
 
-For the pending `pct_minority` (census.py) + OSM rivers (openstreetmap.py) rebuild, delete:
-- `cache/census.cols.parquet` + `cache/census.cols.signature.json`  → forces `pct_minority`
-- `cache/osm/water.parquet` + `.signature.json` (raw water geom — now includes `waterway`
-  linestrings), `cache/osm/do_distance_osm_water.cols.parquet` + sig, and
-  `cache/osm/all.cols.parquet` + sig  → forces river-aware water proximity
-- Leave the `osm/do_distance_osm_parks*` caches alone (unaffected, and expensive to rebuild).
+**Lessons from the 2026-06-21 rebuild (rivers worked; pct_minority needed a 2nd patch; sleep killed it):**
+
+- **OSM rivers fix: WORKED.** AGC enriches TWO separate OSM features: `rivers` (2-mi radius,
+  uses `_get_tags("rivers")`, cached at `cache/osm/rivers.parquet` + `do_distance_osm_rivers`)
+  AND `water` (1-mi, `_get_tags("water")` = reservoirs/canals/natural, cached at
+  `osm/water.parquet`). `proximity_to_osm_rivers` and `proximity_to_osm_water` are BOTH in
+  ind_vars. The `openstreetmap.py` `waterway` patch is on the `rivers` tag set — after the
+  rebuild `osm/rivers.parquet` has 7,059 waterway linestrings (500 river + 6,559 stream),
+  vs polygons-only before. Deleting `osm/all.cols.parquet` cascades a full OSM re-enrich that
+  re-fetches rivers too, so rivers regenerated even though only the water caches were
+  explicitly deleted — but to be safe, also delete `osm/rivers.parquet` + sig +
+  `osm/do_distance_osm_rivers.cols.parquet` + sig when changing the rivers tags.
+- **`pct_minority` needs TWO patches, not one.** `census.py` computes it, but
+  `_enrich_df_census` in `data.py` built its keep-list only from `get_census_map()`'s raw ACS
+  fields, so the *derived* `pct_minority` was filtered out before the parcel join. Fixed in
+  `data.py` (commit `7eacf70`, philly-patches-0.6.0) to also keep known derived census cols.
+  Both patches must be present for `pct_minority` to enrich. Still needs a Stage-1 rebuild to
+  populate (the 2026-06-21 rebuild produced everything EXCEPT pct_minority because the data.py
+  fix landed after).
+- **Disable sleep for any unattended Stage 1/3 run.** The 2026-06-21 rebuild died at Stage 3
+  when the machine entered Modern Standby (DC/battery standby timeout was **3 minutes**),
+  which suspends/kills background processes. Before a long run: `powercfg /change
+  standby-timeout-ac 0` and `standby-timeout-dc 0`, and **restore the captured originals
+  after** (AC was 60 min, DC 3 min).
 
 Then the full sequence:
-1. Delete the enrichment caches above.
-2. Re-run Stage 1, Stage 2, Stage 3 in order.
-3. Delete `out/checkpoints/3-model-00-enrich-spatial-lag.pickle` so Stage 3 rebuilds `sup`
+1. Delete the enrichment caches: `cache/census.cols.parquet` + sig (→ `pct_minority`);
+   `cache/osm/rivers.parquet` + sig + `osm/do_distance_osm_rivers.cols.parquet` + sig and
+   `osm/all.cols.parquet` + sig (→ river-aware proximity). Leave `osm/do_distance_osm_parks*`
+   alone (unaffected, expensive).
+2. Disable sleep (see above).
+3. Re-run Stage 1, Stage 2, Stage 3 in order.
+4. Delete `out/checkpoints/3-model-00-enrich-spatial-lag.pickle` so Stage 3 rebuilds `sup`
    with the new columns (otherwise the stale checkpoint is reused).
-4. On a Stage-1 rebuild that changes the row set, also clear the horizontal-equity cluster
+5. On a Stage-1 rebuild that changes the row set, also clear the horizontal-equity cluster
    caches `cache/he_id.cols.parquet`, `cache/impr_he_id.cols.parquet`,
-   `cache/land_he_id.cols.parquet` (Berks saw stale/corrupted reads here in Stage 2's HE
-   step; the coarse signature or a half-written parquet can slip past auto-invalidation).
-5. Hyperparameter JSONs (`out/models/<group>/main/*_params.json`) are **not** cleared by
+   `cache/land_he_id.cols.parquet`.
+6. Hyperparameter JSONs (`out/models/<group>/main/*_params.json`) are **not** cleared by
    checkpoint deletion; delete manually only if you intend to re-tune. *(Relayed — unverified.)*
+7. Restore the sleep timeouts when the run completes.
 
 ## Interpreting ratio-study output
 
