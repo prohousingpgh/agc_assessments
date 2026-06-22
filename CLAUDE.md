@@ -196,3 +196,33 @@ candidates; the equity-sensitive ones (census.py, data.py) must NOT be PR'd publ
   `settings.json` also pins `ensemble.models=[trio]`, but that's currently inert — the
   prediction path reads the wrong key (`benchmark.py` ~3114 reads `"list"` not `"models"`);
   the permanent fix is that one-liner, after which commercial needs a per-group override.
+
+## Report (`report/`)
+
+LaTeX report modeled on Pro-Housing Pittsburgh's reassessment PDF, with an added
+equity-analysis section. **Hard rule (user): no hardcoded numbers in the document** —
+every figure, table, and inline statistic is generated from the pipeline outputs. Two
+generators feed `report.tex` (which only `\input`s / `\includegraphics`es them):
+- `build_report.py` → `generated/macros.tex` + results/equity tables. Reads the per-group
+  `out/models/<group>/reports/ratio_study.md`, the ensemble pickles (VEI via
+  `get_vertical_equity_scores`), and the published `output/` CSVs.
+- `build_figures.py` → `figures/*.png` — five census-tract choropleths (sales ratio
+  existing/new, land value existing/new, valuation ratio). Reads the ensemble pickles'
+  `df_sales`/`df_universe` + `output/census_tract_land_price_per_sqft.csv`.
+
+Build: `python report/build_report.py && python report/build_figures.py` then the 4-pass
+`pdflatex … bibtex … pdflatex … pdflatex` (compiles to ~9 pp, 0 overfull). `generated/`,
+`figures/`, and build artifacts are gitignored — regenerate from data; only the source
+(`.tex`, the two `.py`, `.bib`, README) is tracked.
+
+**Map data quirks (verified):**
+- **Census-tract join:** `df_sales`/`df_universe` `census_tract` is the bare tract number
+  (`'4520'`, `'4070.02'`); the tract GeoJSON join key is `TRACTCE` = `round(census_tract×100)`
+  zero-padded to 6 (`'452000'`, `'407002'`). Same transform joins the land CSV's `CENSUS_TRACT`.
+- **`assr_market_value` has zeros** (exempt parcels) — guard ratio denominators (nullable-Int
+  cols *raise* `ZeroDivisionError` rather than yielding `inf`; cast to float and mask `≤0`).
+- **The published land map is sparse (~88 of ~390 tracts).** `census_tract_land_price_per_sqft.csv`
+  only emits a value where there are enough vacant/land-dominant sales to identify one — a real
+  limitation, disclosed in the figure annotation + §5.2, not a bug.
+- **Valuation ratio (new ÷ current) is > 1 almost everywhere** (county under-assesses ~2×), so
+  diverging maps of it are centered on the **county median**, not 1.0.
