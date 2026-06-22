@@ -36,13 +36,23 @@ facts and `README` for current results. Status as of 2026-06-22.
 
 ## Deliverable
 
-- [ ] **LaTeX report** of the assessment-fairness analysis, analogous to Pro-Housing Pittsburgh's
-  `drafts/2026-06-15 Allegheny_County_Reassessment.pdf`. Not started — first study the PDF's
-  structure. Pull from the current results: 5-group ratio study (median ratio / COD vs county;
-  county assesses at ~half of market), the VEI fix, and the equity findings (level equity passes
-  across income AND racial composition; COD/uniformity gap in majority-minority older/urban tracts).
-  Apply the global LaTeX preamble rules (see global CLAUDE.md). For a publication run, set
-  `DO_SHAPS=True` in `run_03_model.py` (explainability / IAAO narrative — never for iteration).
+- [~] **LaTeX report** — first draft done in `report/` (compiles to 6 pp; 0 errors/overfull),
+  modeled on `drafts/2026-06-15 Allegheny_County_Reassessment.pdf` + adds an equity-analysis
+  section. **No hardcoded numbers**: `report/build_report.py` generates `generated/macros.tex` +
+  the results/equity tables from the pipeline outputs, and `report.tex` `\input`s them. Build:
+  `python report/build_report.py` then `pdflatex report && bibtex report && pdflatex report &&
+  pdflatex report` (see `report/README.md`). Preamble follows the global CLAUDE.md rules.
+  Remaining:
+  - [ ] **Choropleth figures** — run the pipeline's `make_maps.py`, copy the referenced PNGs
+    (`median_sales_ratio_*`, `land_value_*`, `valuation_ratio_*`) into `report/figures/` (the
+    report auto-fills them via `\IfFileExists`; shows placeholder boxes until then).
+  - [ ] **Bibliography** — 2 entries now (IAAO, OpenAVMKit); the source PDF cites ~17. Expand
+    `report/references.bib` + add `\citep`s (history, the reassessment bill, etc.).
+  - [ ] **Authorship** — confirm/adjust (placeholder: "Russell Richie / Pro-Housing Pittsburgh,
+    updating Billings & Schwartz").
+  - [ ] **Per-area data appendix** (optional) — generate per-tract/-municipality tables from `output/`.
+  - For a SHAP/explainability publication run, set `DO_SHAPS=True` in `run_03_model.py`
+    (never for iteration).
 
 ## Modeling / analysis
 
