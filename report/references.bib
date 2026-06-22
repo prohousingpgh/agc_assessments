@@ -1,13 +1,19 @@
+% =============================================================================
+% References for the AGC reassessment report.
+% Standards / toolkit (cited in methodology + appendix)
+% =============================================================================
+
 @manual{iaao_mass,
   title        = {Standard on Mass Appraisal of Real Property},
-  organization = {International Association of Assessing Officers},
+  author       = {{International Association of Assessing Officers}},
   address      = {Kansas City, MO},
-  year         = {2017}
+  year         = {2017},
+  url          = {https://www.iaao.org/wp-content/uploads/StandardOnMassAppraisal.pdf}
 }
 
 @manual{iaao_ratio,
   title        = {Standard on Ratio Studies},
-  organization = {International Association of Assessing Officers},
+  author       = {{International Association of Assessing Officers}},
   address      = {Kansas City, MO},
   year         = {2018}
 }
@@ -17,4 +23,215 @@
   author       = {Doucet, Lars and {Center for Land Economics}},
   year         = {2025},
   howpublished = {\url{https://www.openavmkit.com}}
+}
+
+@misc{doucet_land,
+  title        = {Valuing Land: The Simplest Viable Method},
+  author       = {Doucet, Lars},
+  year         = {2025},
+  month        = sep,
+  howpublished = {Progress and Poverty},
+  url          = {https://progressandpoverty.substack.com/p/valuing-land-the-simplest-viable}
+}
+
+@misc{quintos2014,
+  title        = {Improving Assessment Equity in Mass Appraisal Models},
+  author       = {Quintos, Carmela},
+  journal      = {Journal of Property Tax Assessment \& Administration},
+  volume       = {11},
+  number       = {4},
+  pages        = {53--64},
+  year         = {2014}
+}
+
+% =============================================================================
+% Modeling methods (technical appendix)
+% =============================================================================
+
+@inproceedings{xgboost,
+  title        = {{XGBoost}: A Scalable Tree Boosting System},
+  author       = {Chen, Tianqi and Guestrin, Carlos},
+  booktitle    = {Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining},
+  pages        = {785--794},
+  year         = {2016},
+  publisher    = {ACM},
+  doi          = {10.1145/2939672.2939785}
+}
+
+@article{lightgbm,
+  title        = {{LightGBM}: A Highly Efficient Gradient Boosting Decision Tree},
+  author       = {Ke, Guolin and Meng, Qi and Finley, Thomas and Wang, Taifeng and Chen, Wei and Ma, Weidong and Ye, Qiwei and Liu, Tie-Yan},
+  journal      = {Advances in Neural Information Processing Systems},
+  volume       = {30},
+  year         = {2017}
+}
+
+% =============================================================================
+% Background: history, statute, and the legislative push
+% =============================================================================
+
+@manual{pa_cca,
+  title        = {53 Pa.C.S. \S\S 8831--8834: County Assessment Office Provisions},
+  author       = {{Commonwealth of Pennsylvania}},
+  year         = {2026},
+  note         = {Pennsylvania Consolidated Statutes (Consolidated County Assessment Law)}
+}
+
+@manual{pa_sccal,
+  title        = {Second Class County Assessment Law and Second Class County Code},
+  author       = {{Commonwealth of Pennsylvania}},
+  year         = {2026},
+  note         = {Statutory framework governing assessment procedures in Allegheny County}
+}
+
+@misc{briem2022,
+  title        = {From Atrophy to Rocket Science (and Back): A Brief History of Property Assessments in Allegheny County},
+  author       = {Briem, Christopher},
+  year         = {2022},
+  url          = {https://briem.medium.com/from-atrophy-to-rocket-science-and-back-a-brief-history-of-property-assessments-in-allegheny-988a1278be79}
+}
+
+@misc{hopton2018,
+  title        = {The Pittsburgh Experience: Why Was a Successful {LVT} System Abandoned},
+  author       = {Hopton, Iain},
+  year         = {2018},
+  url          = {https://landvaluetaxguide.com/the-pittsburgh-experience/}
+}
+
+@misc{hughes2006,
+  title        = {Why So Little Georgism in America: Using the Pennsylvania Case Files to Understand the Slow, Uneven Progress of Land Value Taxation},
+  author       = {Hughes, Mark Alan},
+  year         = {2006},
+  howpublished = {Working paper, Lincoln Institute of Land Policy},
+  url          = {https://www.lincolninst.edu/publications/working-papers/why-so-little-georgism-america}
+}
+
+@article{horton2024,
+  title        = {Property Tax Policy and Housing Affordability},
+  author       = {Horton, Benjamin and LaPoint, David and Lutz, Byron and Seegert, Nathan and Walczak, Jared},
+  journal      = {National Tax Journal},
+  year         = {2024},
+  doi          = {10.1086/732777}
+}
+
+@misc{wesa2023,
+  title        = {To Reassess or Not to Reassess? Property Tax Mess Awaits Next Allegheny County Executive},
+  author       = {{WESA}},
+  year         = {2023},
+  month        = mar,
+  url          = {https://www.wesa.fm/politics-government/2023-03-13/to-reassess-or-not-to-reassess-property-tax-mess-awaits-next-allegheny-county-exec}
+}
+
+@misc{pgh_council2025,
+  title        = {Will of Council Urging a Comprehensive Countywide Property Reassessment in Allegheny County},
+  author       = {{Pittsburgh City Council}},
+  year         = {2025},
+  note         = {Legistar File No. 2025-2596, Enactment No. 756, adopted December 9, 2025},
+  url          = {https://pittsburgh.legistar.com/LegislationDetail.aspx?ID=7774439}
+}
+
+@misc{postgazette2025,
+  title        = {Editorial: Welcome to the Reassessment Fight, City Council},
+  author       = {{Pittsburgh Post-Gazette}},
+  year         = {2025},
+  month        = dec,
+  url          = {https://www.post-gazette.com/opinion/editorials/2025/12/09/property-tax-reassessment-city-council-taxes-lavelle-innamorato/stories/202512090012}
+}
+
+@misc{prohousing2024,
+  title        = {Policy: Property Tax Assessments},
+  author       = {{Pro-Housing Pittsburgh}},
+  year         = {2024},
+  month        = may,
+  url          = {https://www.prohousingpgh.org/blog/policy-property-tax-assessments}
+}
+
+% =============================================================================
+% Cost estimate
+% =============================================================================
+
+@misc{council_tv2024,
+  title        = {Public Hearing on Assessments},
+  author       = {{Allegheny County Council TV}},
+  year         = {2024},
+  month        = may,
+  note         = {YouTube video; statement by Paul Miller of Tyler Technologies at 1:54:23},
+  url          = {https://www.youtube.com/live/xkpNSBXHyjA}
+}
+
+@misc{parkinson2024,
+  title        = {Meeting with Pro-Housing Pittsburgh Regarding Regular Property Assessments in Allegheny County},
+  author       = {Parkinson, Jake},
+  year         = {2024},
+  month        = dec,
+  note         = {Unpublished meeting notes}
+}
+
+@misc{anderson2026,
+  title        = {Memorandum in Support of Bill 13892-26, Version 1},
+  author       = {Anderson, John E.},
+  year         = {2026},
+  month        = apr,
+  note         = {Letter to Allegheny County Council regarding reassessment policy}
+}
+
+@misc{skidmore2026,
+  title        = {Letter in Support of Bill 13892-26 (Allegheny County Reassessment Ordinance)},
+  author       = {Skidmore, Mark},
+  year         = {2026},
+  month        = apr,
+  note         = {Letter to Allegheny County Council}
+}
+
+% =============================================================================
+% Data sources
+% =============================================================================
+
+@misc{wprdc,
+  title        = {Property Assessments},
+  author       = {{Western Pennsylvania Regional Data Center}},
+  year         = {2024},
+  note         = {Licensed under Creative Commons CC0},
+  url          = {https://data.wprdc.org/dataset/property-assessments}
+}
+
+@misc{loopnet,
+  title        = {{LoopNet}: Commercial Real Estate Listings},
+  author       = {{LoopNet}},
+  year         = {2026},
+  url          = {https://www.loopnet.com/}
+}
+
+@misc{sardari2025,
+  title        = {Global ML Building Footprints Data with Estimated Height},
+  author       = {Sardari, Rod},
+  year         = {2025},
+  howpublished = {Tableau Public visualization},
+  url          = {https://public.tableau.com/views/GlobalMLBuildingFootprintsDataWithEstimatedHeight/GlobalMLBuildingFootprints}
+}
+
+@misc{census_lodes,
+  title        = {{LEHD} Origin-Destination Employment Statistics ({LODES})},
+  author       = {{U.S. Census Bureau}},
+  year         = {2022},
+  url          = {https://lehd.ces.census.gov/data/lodes}
+}
+
+@misc{acs_tax_exempt,
+  title        = {Tax Exemption Qualifications},
+  author       = {{Allegheny County}},
+  year         = {2026},
+  url          = {https://www.alleghenycounty.us/Services/Property-Assessments-and-Real-Estate/Tax-Abatements-and-Exemptions/Tax-Exemption-Qualifications}
+}
+
+% =============================================================================
+% External equity / validity check
+% =============================================================================
+
+@techreport{berry2024,
+  title        = {An Evaluation of Property Tax Regressivity in Allegheny County, Pennsylvania},
+  author       = {Berry, Christopher},
+  institution  = {University of Chicago Center for Municipal Finance},
+  year         = {2024},
+  url          = {https://s3.us-east-2.amazonaws.com/propertytaxdata.uchicago.edu/nationwide_reports/web/Allegheny%20County_Pennsylvania.html}
 }

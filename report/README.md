@@ -11,13 +11,17 @@ statistic is generated from the pipeline outputs and pulled in via `\input`.
 
 ```bash
 # 1. Generate the data fragments (macros + tables) from the model outputs.
-#    Reads the ratio-study reports, ensemble pickles, and published CSVs.
-python build_report.py            # -> generated/macros.tex, results_table.tex, equity_*.tex
+#    Reads the ratio-study reports, ensemble pickles, published CSVs, and the
+#    100-parcel data-quality sanity-check CSV.
+python build_report.py            # -> generated/macros.tex, results_table.tex,
+                                  #    equity_*.tex, audit_table.tex, coef_tables.tex
 
-# 2. Generate the choropleth maps into figures/ (census-tract choropleths built
-#    from the ensemble pickles + the published land CSV). Until this is run,
-#    report.tex shows labeled placeholder boxes instead.
-python build_figures.py           # -> figures/*.png
+# 2. Generate the figures into figures/ (census-tract choropleths from the
+#    ensemble pickles + land CSV; valuation-ratio-by-district maps and ranked
+#    bar charts from the published district CSVs). Until this is run, report.tex
+#    shows labeled placeholder boxes instead.
+python build_figures.py           # -> figures/*.png (sales-ratio, land, valuation
+                                  #    ratio, + 4 district views)
 
 # 3. Compile.
 pdflatex report && bibtex report && pdflatex report && pdflatex report

@@ -115,6 +115,135 @@ def _county_underassessment():
     ratio = new / cur if cur else None
     return ratio, (100.0 / ratio if ratio else None)  # ratio (e.g. 2.08), pct-of-market (e.g. 48)
 
+# --- dataset-quality audit from the 100-parcel sanity-check sample -------------
+
+def _dataset_audit():
+    """Regenerate the parcel-data error rates from the committed sanity-check CSV.
+
+    Compares the county's listed values against independent references (computed
+    parcel geometry for lot area; Zillow for the rest) for a 100-parcel sample.
+    Returns (macro_lines, audit_table_tex) or ([], None) if the file is absent.
+    """
+    p = os.path.join(REPO, "output", "allegheny_county_parcel_data_sanity_check.csv")
+    if not os.path.exists(p):
+        return [], None
+    df = pd.read_csv(p)
+    n = len(df)
+
+    def num(c):
+        return pd.to_numeric(df[c], errors="coerce") if c in df.columns else pd.Series(dtype=float)
+
+    def pct_bands(county, ref):
+        m = county.notna() & ref.notna() & (ref > 0)
+        pe = (county[m] - ref[m]).abs() / ref[m]
+        return int(((pe > 0.10) & (pe <= 0.30)).sum()), int((pe > 0.30).sum())
+
+    def int_bands(county, ref):
+        m = county.notna() & ref.notna()
+        d = (county[m] - ref[m]).abs()
+        return int((d == 1).sum()), int((d > 1).sum())
+
+    def differ(county, ref):
+        m = county.notna() & ref.notna()
+        return int((county[m] != ref[m]).sum())
+
+    lot_mod, lot_maj = pct_bands(num("LOTAREA"), num("Computed lot size"))
+    yr_one, yr_multi = int_bands(num("YEARBLT"), num("Zillow year built"))
+    fla_mod, fla_maj = pct_bands(num("FINISHEDLIVINGAREA"), num("Zillow building square footage"))
+    bed_one, bed_multi = int_bands(num("BEDROOMS"), num("Zillow bedroom count"))
+    fullbath = differ(num("FULLBATHS"), num("Zillow full baths count"))
+    halfbath = differ(num("HALFBATHS"), num("Zillow half baths count"))
+
+    m = [
+        rf"\newcommand{{\auditSampleN}}{{{n}}}",
+        rf"\newcommand{{\auditLotMod}}{{{lot_mod}}}",
+        rf"\newcommand{{\auditLotMaj}}{{{lot_maj}}}",
+        rf"\newcommand{{\auditLotAny}}{{{lot_mod + lot_maj}}}",
+    ]
+    rows = "\n".join([
+        rf"Lot area & Computed geometry & off 10--30\% & {lot_mod} \\",
+        rf"Lot area & Computed geometry & off $>$30\% & {lot_maj} \\",
+        rf"Year built & Zillow & off by 1 year & {yr_one} \\",
+        rf"Year built & Zillow & off by $>$1 year & {yr_multi} \\",
+        rf"Finished living area & Zillow & off 10--30\% & {fla_mod} \\",
+        rf"Finished living area & Zillow & off $>$30\% & {fla_maj} \\",
+        rf"Bedrooms & Zillow & off by 1 & {bed_one} \\",
+        rf"Bedrooms & Zillow & off by $>$1 & {bed_multi} \\",
+        rf"Full baths & Zillow & count differs & {fullbath} \\",
+        rf"Half baths & Zillow & count differs & {halfbath} \\",
+    ])
+    table = header + r"""\begin{tabular}{lllr}
+\toprule
+Field & Reference & Discrepancy & Parcels \\
+\midrule
+""" + rows + r"""
+\bottomrule
+\end{tabular}
+"""
+    return m, table
+
+# --- per-group linear (OLS) coefficient tables ---------------------------------
+
+# label + display order for the dollar-scale coefficients in each mra/params.csv.
+_COEF_LABELS = {
+    "intercept":                       "Intercept",
+    "finished_living_area_sqft":       "Finished living area (sq ft)",
+    "land_area_sqft":                  "Land area (sq ft)",
+    "bldg_condition_num":              "Building condition",
+    "bldg_quality_num":                "Building quality",
+    "bldg_age_years":                  "Building age (years)",
+    "spatial_lag_sale_price_time_adj": "Spatial lag of sale price",
+    "slope_mean_deg":                  "Mean slope (degrees)",
+    "proximity_to_osm_water":          "Proximity to water",
+    "median_income":                   "Median income (tract)",
+    "median_g_rent":                   "Median gross rent (tract)",
+    "polar_radius":                    "Polar radius",
+    "polar_angle":                     "Polar angle",
+}
+_COEF_ORDER = list(_COEF_LABELS.keys())
+
+def _coef_fmt(x):
+    """Dollar-scale coefficient -> readable string (commas for large, decimals for small)."""
+    x = float(x); ax = abs(x)
+    if ax >= 1000: return f"{x:,.0f}"
+    if ax >= 10:   return f"{x:.1f}"
+    if ax >= 1:    return f"{x:.2f}"
+    return f"{x:.4f}"
+
+def _coef_tables():
+    """Per-residential-group linear coefficient tables from each group's mra/params.csv.
+
+    These are dollar-scale OLS coefficients (marginal effects), reported for
+    interpretability; the linear engines used in the ensemble are fit in log form.
+    Returns a LaTeX string of stacked table floats, or '' if no params are found.
+    """
+    blocks = []
+    for key, label, suf, is_res in GROUPS:
+        if not is_res:
+            continue
+        p = os.path.join(MODELS, key, "main", "mra", "params.csv")
+        if not os.path.exists(p):
+            continue
+        d = pd.read_csv(p).set_index("variable")
+        rows, seen = [], set()
+        ordered = _COEF_ORDER + [v for v in d.index if v not in _COEF_ORDER]
+        for v in ordered:
+            if v in d.index and v in _COEF_LABELS and v not in seen:
+                seen.add(v)
+                rows.append(rf"{_COEF_LABELS[v]} & {_coef_fmt(d.loc[v, 'coefficient'])} "
+                            rf"& {_coef_fmt(d.loc[v, 'error'])} \\")
+        if not rows:
+            continue
+        blocks.append(
+            rf"\begin{{table}}[htbp]\centering" "\n"
+            rf"\caption{{Linear (OLS) coefficients on the dollar scale: {label}.}}" "\n"
+            rf"\label{{tab:coef-{suf}}}" "\n"
+            r"\begin{tabular}{lrr}" "\n\\toprule\n"
+            r"Variable & Coefficient & Std.\ error \\" "\n\\midrule\n"
+            + "\n".join(rows) +
+            "\n\\bottomrule\n\\end{tabular}\n\\end{table}")
+    return header + "\n\n".join(blocks) + "\n" if blocks else ""
+
 # --- LaTeX emission ------------------------------------------------------------
 
 def _texnum(x, dec=2):
@@ -200,8 +329,21 @@ Model group & Band & MSR & COD & Band & MSR & COD \\
 \end{tabular}
 """
 
+# dataset-quality audit (regenerated from the 100-parcel sanity-check CSV)
+audit_macros, audit_table = _dataset_audit()
+macros.extend(audit_macros)
+
 with open(os.path.join(GEN, "macros.tex"), "w", encoding="utf-8") as f:
     f.write(header + "\n".join(macros) + "\n")
+if audit_table:
+    with open(os.path.join(GEN, "audit_table.tex"), "w", encoding="utf-8") as f:
+        f.write(audit_table)
+
+# per-group linear coefficient tables (regenerated from each group's mra/params.csv)
+coef_tables = _coef_tables()
+if coef_tables:
+    with open(os.path.join(GEN, "coef_tables.tex"), "w", encoding="utf-8") as f:
+        f.write(coef_tables)
 with open(os.path.join(GEN, "results_table.tex"), "w", encoding="utf-8") as f:
     f.write(results_table)
 with open(os.path.join(GEN, "equity_income.tex"), "w", encoding="utf-8") as f:

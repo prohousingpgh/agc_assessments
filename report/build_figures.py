@@ -156,6 +156,72 @@ def log_norm(*series):
     return LogNorm(vmin=lo, vmax=hi)
 
 
+# ------------------------------------------------------------------- district views
+def read_ratio(fname, keycol, valcol):
+    """output/<fname> -> Series of valuation ratio indexed by stripped district key."""
+    d = pd.read_csv(os.path.join(OUTPUT, fname))
+    s = pd.to_numeric(d[valcol], errors="coerce")
+    s.index = d[keycol].astype(str).str.strip()
+    return s.dropna()
+
+
+def district_choropleth(geojson, join_col, values, title, fname, *, norm, cbar_label,
+                        cmap="RdBu_r", label_fn=lambda s: s):
+    """Choropleth of a per-district ratio Series over a districts GeoJSON."""
+    gdf = gpd.read_file(os.path.join(ROOT, geojson)).to_crs(epsg=PROJ)
+    gdf["_key"] = gdf[join_col].astype(str).str.strip()
+    gdf = gdf.merge(values.rename("val"), left_on="_key", right_index=True, how="left")
+    fig, ax = plt.subplots(figsize=(9, 7.5))
+    gdf.plot(column="val", ax=ax, cmap=cmap, norm=norm, linewidth=0.5, edgecolor="white",
+             missing_kwds={"color": "#e9e9e9", "edgecolor": "white", "linewidth": 0.5})
+    for _, row in gdf.iterrows():
+        if row.geometry is None or row.geometry.is_empty:
+            continue
+        c = row.geometry.representative_point()
+        ax.annotate(label_fn(str(row["_key"])), xy=(c.x, c.y), ha="center", va="center",
+                    fontsize=8, color="#1a1a1a")
+    ax.set_title(title, fontsize=14, pad=10)
+    ax.axis("off")
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, shrink=0.62, fraction=0.04, pad=0.01)
+    cbar.set_label(cbar_label, fontsize=10)
+    fig.savefig(fname, dpi=180, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote {os.path.relpath(fname, ROOT)}")
+
+
+def district_barh(values, title, fname, *, xlabel, top_bottom=None):
+    """Sorted horizontal bar chart of a per-district ratio Series (1.0 = county-typical).
+
+    Used where no district geometry is available (municipalities, school districts).
+    With top_bottom set, show only the N highest and N lowest to stay legible.
+    """
+    s = values.dropna().sort_values()
+    note = None
+    if top_bottom and len(s) > 2 * top_bottom:
+        s = pd.concat([s.head(top_bottom), s.tail(top_bottom)])
+        note = (f"the {top_bottom} highest and {top_bottom} lowest of "
+                f"{len(values.dropna())} shown; full list in output/")
+    colors = ["#b2182b" if v >= 1.0 else "#2166ac" for v in s.values]
+    fig, ax = plt.subplots(figsize=(7.5, max(3.5, 0.23 * len(s) + 1.0)))
+    ax.barh(range(len(s)), s.values, color=colors)
+    ax.set_yticks(range(len(s)))
+    ax.set_yticklabels(s.index, fontsize=7)
+    ax.set_ylim(-0.6, len(s) - 0.4)
+    ax.axvline(1.0, color="#333333", linewidth=0.9, linestyle="--")
+    ax.set_xlabel(xlabel, fontsize=9)
+    ax.set_title(title, fontsize=13, pad=8)
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
+    if note:
+        ax.annotate(note, xy=(0.5, -0.09), xycoords="axes fraction", ha="center",
+                    fontsize=7, color="#777777")
+    fig.savefig(fname, dpi=180, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote {os.path.relpath(fname, ROOT)}")
+
+
 # ----------------------------------------------------------------------------- main
 def main():
     os.makedirs(FIGDIR, exist_ok=True)
@@ -216,6 +282,35 @@ def main():
                "Valuation ratio by census tract\nNew ÷ current total assessment",
                os.path.join(FIGDIR, "valuation_ratio_parcel.png"),
                cmap="RdBu_r", norm=vr_norm, cbar_label="new ÷ current (white = county median)")
+
+    # --- 6-9: valuation ratio by political / administrative district ------------
+    # These CSVs are already normalized so 1.0 = the county-typical increase; a
+    # district above 1.0 would rise faster than typical (shoulder more of the levy).
+    cc = read_ratio("city_council_district_valuation_ratios.csv",
+                    "city_council_district", "city_council_district_valuation_ratio")
+    cca = read_ratio("county_council_district_valuation_ratios.csv",
+                     "county_council_district", "county_council_district_valuation_ratio")
+    sd = read_ratio("school_district_valuation_ratios.csv",
+                    "school_district", "school_district_valuation_ratio")
+    muni = read_ratio("municipality_valuation_ratios.csv",
+                      "municipality", "municipality_valuation_ratio")
+
+    council = pd.concat([cc, cca])
+    d_norm = TwoSlopeNorm(vmin=min(0.99, float(council.min())), vcenter=1.0,
+                          vmax=max(1.01, float(council.max())))
+    dbar = "new ÷ current (1.0 = county-typical increase)"
+    district_choropleth("data/city_council_districts_2022.geojson", "DIST_NAME", cc,
+                        "Valuation ratio by Pittsburgh city council district",
+                        os.path.join(FIGDIR, "valratio_city_council.png"),
+                        norm=d_norm, cbar_label=dbar)
+    district_choropleth("data/county_council_districts.geojson", "LABEL", cca,
+                        "Valuation ratio by county council district",
+                        os.path.join(FIGDIR, "valratio_county_council.png"),
+                        norm=d_norm, cbar_label=dbar, label_fn=lambda s: s.replace("District ", "D"))
+    district_barh(sd, "Valuation ratio by school district",
+                  os.path.join(FIGDIR, "valratio_school_district.png"), xlabel=dbar)
+    district_barh(muni, "Valuation ratio by municipality",
+                  os.path.join(FIGDIR, "valratio_municipality.png"), xlabel=dbar, top_bottom=15)
 
     print("\nDone. Figures in", os.path.relpath(FIGDIR, ROOT))
 
