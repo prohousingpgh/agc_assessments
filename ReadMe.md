@@ -1,9 +1,104 @@
-# Introduction
+# Allegheny County Open AVMKit
 
-This ReadMe contains step-by-step instructions for replicating the assessments found in this repository and used in Pro-Housing Pittsburgh's report on Tax Assessments.
-For any questions, please contact Connor Schwartz (Connor.Schwartz98@gmail.com).
+Allegheny County, PA (FIPS 42003) property valuation models using [OpenAVMKit](https://github.com/larsiusprime/openavmkit), supporting Pro-Housing Pittsburgh's report on tax-assessment fairness. For questions, contact Connor Schwartz (Connor.Schwartz98@gmail.com).
 
-Instructions for downloading and installing OpenAvmKit are available at https://www.OpenAvmKit.com/
+> **Disclaimer:** This is independent research in progress. All models, findings, and estimates are provided for research and educational purposes only. No warranty is made regarding accuracy, completeness, or fitness for any particular purpose. This work does not constitute professional appraisal, legal, tax, or financial advice. Results should not be relied upon for any official, legal, or financial decision, including property tax appeals. Use at your own risk.
+
+> **⚠️ Equity Testing Required — Census Variables in Model**
+>
+> The residential models use Census tract-level variables as predictors — `median_income` and `median_g_rent` (ACS) — plus the PCRG Market Value Analysis tier `market_value_category`. These capture neighborhood market conditions but also correlate with the racial and socioeconomic composition of residents.
+>
+> IAAO Standard on Mass Appraisal of Real Property (2017) §7.3 prohibits variables that produce racially discriminatory *outcomes* — the concern is not the input itself but the effect. Census variables can be appropriate if the resulting assessment ratios are equitable across protected groups. The key test is a ratio study stratified by income and, where data permits, by neighborhood racial composition.
+>
+> **Status:** the ratio study is stratified by income quintile (`ratio_study.breakdowns`). At the current iteration, **level equity by income passes** — the median ratio is flat (~1.0) across all income quintiles in every group. A horizontal-equity concern remains: COD (assessment *uniformity*) is ~1.4–1.7× worse in the lowest-income quintile than the highest, systematically across groups. A `pct_minority` (ACS B03002) racial-composition breakdown is wired into the settings but **pending a Stage-1 rebuild** to enrich the column. **Before any official use,** run the full stratified equity analysis and confirm ratios are within IAAO tolerances across all income and racial-composition strata. See `CLAUDE.md` for the detailed equity findings.
+
+## Overview
+
+This project builds automated valuation models (AVMs) for ~584,000 Allegheny County parcels from publicly available assessment, parcel, and sales data, enriched with Census, OpenStreetMap, and DEM (elevation) features. Models are trained with [OpenAVMKit](https://github.com/larsiusprime/openavmkit) (LightGBM, linear regression, and spatial/comparable-sales engines), and assessment quality is measured with [IAAO-standard ratio studies](https://www.iaao.org/wp-content/uploads/Standard_on_Ratio_Studies.pdf) compared against the county's published assessments. The goal is to support distributional analysis of property-tax fairness and a potential land-value-tax shift.
+
+- **Locality:** Allegheny County, PA · **FIPS:** 42003 · **County seat:** Pittsburgh
+- **Valuation date:** 2026-01-01 · **Study period:** 2025-01-01 – 2026-01-01
+- **Model groups (5):** `commercial`, `residential_multi_family`, and three residential single-family groups — `urban`, `suburban_prewar`, and `suburban`
+
+## Current Results
+
+> **⚠️ Provisional — iteration in progress (2026-06-21).** These numbers are from the latest in-development run and are **not** final. Caveats: the residential ensembles were just re-blended to fix vertical equity (see below); the suburban group's numbers were salvaged from a stale (pre-rivers) checkpoint and want a clean re-run; `pct_minority` is not yet enriched; commercial is data-starved (~43 study-period sales); and the published `output/` CSVs have not been regenerated against this run.
+
+Per-group ratio study over the 2025–2026 study period. Ratios are `prediction / sale_price` (raw, unadjusted); because the model targets time-adjusted 2026-01-01 values and prices shifted over 2025, a well-calibrated model sits slightly below 1.0. COD = Coefficient of Dispersion (lower = more uniform assessments; IAAO residential standard ≤ 15, acceptable ≤ 20).
+
+| Model group | Study-period sales | This model — Median ratio | This model — COD (trimmed) | County — Median ratio | County — COD |
+|---|---|---|---|---|---|
+| Residential SF — Suburban | 5,751 | 0.96 | **10.4** | 0.50 | 13.6 |
+| Residential SF — Urban | 1,459 | 0.97 | **14.4** | 0.42 | 24.0 |
+| Residential SF — Suburban Pre-War | 1,077 | 1.00 | **18.3** | 0.49 | 17.8 |
+| Residential Multi-Family | 1,059 | 0.91 | **9.5** | 0.52 | 15.7 |
+| Commercial | 43 | 1.82 | 35.9 | 0.54 | 24.3 |
+
+The residential groups meet or approach IAAO COD standards (≤ 15, acceptable ≤ 20). Commercial is data-starved (~43 study-period sales) and should be used with caution.
+
+**Current county assessments run at roughly half of market value.** The county's median assessment ratio is ~0.42–0.54 across groups — properties are assessed at ~42–54% of modeled market value — a key input to the fairness analysis.
+
+**Vertical equity (VEI).** OpenAVMKit's default ensemble optimizes accuracy (MAPE) with no equity term, and is regressive (cheap properties over-assessed relative to expensive). The pipeline re-blends the residential ensembles to the median of `[mra, multi_mra, lightgbm]` (`scripts/run_reensemble.py`), which substantially improves VEI at no COD cost: prewar −32 → −12, urban −12 → +8, suburban −14 → −7, multi-family −11 → −6. Commercial keeps its own ensemble (the trio blend does not suit its thin data).
+
+## Features
+
+Residential models use building, land/geometry, location, and neighborhood-context features:
+
+**Building physical** — finished living area, building area, year built / age, quality grade (`bldg_quality_num`), condition (`bldg_condition_num`), CDU grade, stories, bedrooms, baths.
+
+**Land & geometry** — land area (and `land_area_sqft_log`), parcel polar coordinates (radius/angle from county center), rectangularity, aspect ratio.
+
+**Spatial / location** — latitude/longitude; neighborhood, census tract, school district, municipality; spatial lag of time-adjusted sale price; proximity to OSM **rivers** (Pittsburgh's three rivers, captured as `waterway` linestrings), other water bodies, and parks; DEM-derived slope (`slope_mean_deg`).
+
+**Neighborhood context (Census / market)** ⚠️ *requires equity testing — see notice above* — median household income, median gross rent (ACS), and the PCRG Market Value Analysis tier (`market_value_category`).
+
+The **commercial** model additionally uses commercial rent, jobs-per-sqft (Census LODES), and building footprint.
+
+Linear (`mra`/`multi_mra`) residential models train on `log` sale price to avoid negative/compressed predictions at the tails; tree models (`lightgbm`, `xgboost`, `lcomp`) use a wider "kitchen-sink" variable set in price space.
+
+## Data Sources
+
+Input data lives under `data/us-pa-allegheny/in/` and is **not tracked in git** due to size; download instructions are below. Sources:
+
+- **Allegheny County property assessments** (parcel attributes, assessment values, sale history) — [WPRDC](https://data.wprdc.org/dataset/property-assessments)
+- **Parcel geometry** (GeoJSON) — [PASDA](https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214)
+- **Census tract / block-group geography** — [Allegheny County GIS open data](https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-census-tracts-2020) + [WPRDC blocks](https://data.wprdc.org/dataset/allegheny-county-census-blocks-2021)
+- **US Census ACS** (FIPS 42003) — tract-level `median_income` (B19013), `median_g_rent` (B25064); `pct_minority` (B03002) wired in, pending a Stage-1 rebuild
+- **LODES jobs by block** (`jobs_per_sqft`) — [LEHD/Census](https://lehd.ces.census.gov/data/#lodes)
+- **Building footprints & heights** — [Microsoft/Global ML Building Footprints](https://public.tableau.com/views/GlobalMLBuildingFootprintsDataWithEstimatedHeight/GlobalMLBuildingFootprints)
+- **PCRG Market Value Analysis tier** (`market_value_category`) — [WPRDC MVA 2021](https://data.wprdc.org/dataset/market-value-analysis-2021)
+- **OpenStreetMap** — proximity to rivers, water bodies, and parks (via Overpass)
+- **DEM** — elevation/slope enrichment (`slope_mean_deg`)
+- **Commercial rents** — scraped from loopnet.com via `scripts/getCommercialRents.py`
+
+The following are converted by the pre-processing script but **not currently used in modeling**: city/county council districts, steep-slope / flood-zone / undermined overlays (Pittsburgh-only), city limits.
+
+## Running the Pipeline
+
+Always use the project Python (`C:/Users/druss/miniconda3/python.exe`) and launch from the repo root (`C:/projects/agc_assessments`). The `openavmkit` clone at `C:/projects/openavmkit` must be on the **`philly-patches-0.6.0`** branch (shared across the PA county projects). A `CENSUS_API_KEY` in `.env` (gitignored) is required for Stage 1 census enrichment. See `CLAUDE.md` for environment details, the enrichment-cache landmines, checkpoint management, and the full-rebuild sequence.
+
+```bash
+# Stage 0: acquire + convert raw data into OpenAvmKit format (see detail below)
+python scripts/getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson
+python scripts/openAvmKitInputFiles.py <inputs...>
+
+# Stages 1–3: assemble + enrich, clean + sales scrutiny, train + ratio studies
+python scripts/run_01_assemble.py   # load, enrich (census/OSM/DEM/geometry), tag model groups
+python scripts/run_02_clean.py      # sales scrutiny + cleaning
+python scripts/run_03_model.py      # train models, ensemble, ratio studies
+
+# Post-process (no retrain): re-blend residential ensembles to fix vertical equity (~1 min)
+python scripts/run_reensemble.py --apply
+
+# Optional: combine outputs into the published output/ CSVs
+python scripts/combineOutputFiles.py
+```
+
+SHAP/contribution generation is **off by default** (`DO_SHAPS=False` in `run_03_model.py`) and should stay off for metric/equity iteration — it is only needed for a final publication run (explainability / IAAO narrative).
+
+---
+
+## Detailed Setup & Data Acquisition
 
 # Download following files
 
@@ -85,7 +180,8 @@ This controls how the assessment is actually performed.
 This section creates calculations and filters that are used elsewhere in the file. The model groups for ratio studies are defined here.
 
 # Using OpenAvmKit
-Once the input files are generated and OpenAvmKit installed, the user places them in the OpenAvmKit repository as follows:
+
+The modern pipeline is driven by the staged scripts (`scripts/run_01_assemble.py` → `run_02_clean.py` → `run_03_model.py`), which call OpenAvmKit's API directly and write to `data/us-pa-allegheny/out/`. The input files are placed under `data/us-pa-allegheny/in/` as follows:
 
 notebooks/<br>
 ├──pipeline/<br>
@@ -105,9 +201,12 @@ notebooks/<br>
 &emsp;&emsp;&emsp;&emsp; ├── settings.json<br>
 &emsp;&emsp;&emsp;├── out/
 
-This allows users to perform all of the OpenAvmKit operations on the data.
+OpenAvmKit also ships a set of Jupyter notebooks that walk through the same process interactively; `03-model.ipynb` is the modeling step the `run_03_model.py` script automates.
 
-There is a set of Jupyter notebooks in OpenAvmKit that walk users through the process of generating assessments. Book 03-model.ipynb allows users to generate valuations.
+## Results
 
-# Results
-A sample final results file, residential_predictions.csv, is available in this repository.
+A sample final results file, `residential_predictions.csv`, is available in this repository (and is regenerated by `scripts/combineOutputFiles.py`).
+
+## Attribution
+
+Built on [OpenAVMKit](https://github.com/larsiusprime/openavmkit) by Lars Doucet and contributors.
