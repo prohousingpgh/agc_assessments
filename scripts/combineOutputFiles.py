@@ -4,11 +4,17 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-model_groups = ["residential_single_family", "residential_multi_family", "commercial"]
+model_groups = [
+    "residential_single_family_urban",
+    "residential_single_family_suburban_prewar",
+    "residential_single_family_suburban",
+    "residential_multi_family",
+    "commercial",
+]
 
 parcel_data = pd.read_csv(sys.argv[1], dtype={'PARID': str, 'PROPERTYHOUSENUM': str, 'PROPERTYFRACTION': str, 'PROPERTYADDRESS': str, 'PROPERTYCITY': str, 'PROPERTYSTATE': str, 'PROPERTYUNIT': str, 'PROPERTYZIP': str, 'MUNICODE': str, 'MUNIDESC': str, 'SCHOOLCODE': str, 'SCHOOLDESC': str, 'LEGAL1': str, 'LEGAL2': str, 'LEGAL3': str, 'NEIGHCODE': str, 'NEIGHDESC': str, 'TAXCODE': str, 'TAXDESC': str, 'TAXSUBCODE': str, 'TAXSUBCODE_DESC': str, 'OWNERCODE': str, 'OWNERDESC': str, 'CLASS': str, 'CLASSDESC': str, 'USECODE': str, 'USEDESC': str, 'LOTAREA': float, 'HOMESTEADFLAG': str, 'FARMSTEADFLAG': str, 'CLEANGREEN': str, 'ABATEMENTFLAG': str, 'RECORDDATE': str, 'SALEDATE': str, 'SALEPRICE': float, 'SALECODE': str, 'SALEDESC': str, 'DEEDBOOK': str, 'DEEDPAGE': str, 'PREVSALEDATE': str, 'PREVSALEPRICE': str, 'PREVSALEDATE2': str, 'PREVSALEPRICE2': str, 'CHANGENOTICEADDRESS1': str, 'CHANGENOTICEADDRESS2': str, 'CHANGENOTICEADDRESS3': str, 'CHANGENOTICEADDRESS4': str, 'COUNTYBUILDING': str, 'COUNTYLAND': str, 'COUNTYTOTAL': str, 'COUNTYEXEMPTBLDG': str, 'LOCALBUILDING': str, 'LOCALLAND': str, 'LOCALTOTAL': str, 'FAIRMARKETBUILDING': str, 'FAIRMARKETLAND': str, 'FAIRMARKETTOTAL': str, 'STYLE': str, 'STYLEDESC': str, 'STORIES': str, 'YEARBLT': str, 'EXTERIORFINISH': str, 'EXTFINISH_DESC': str, 'ROOF': str, 'ROOFDESC': str, 'BASEMENT': str, 'BASEMENTDESC': str, 'GRADE': str, 'GRADEDESC': str, 'CONDITION': str, 'CONDITIONDESC': str, 'CDU': str, 'CDUDESC': str, 'TOTALROOMS': str, 'BEDROOMS': str, 'FULLBATHS': str, 'HALFBATHS': str, 'HEATINGCOOLING': str, 'HEATINGCOOLINGDESC': str, 'FIREPLACES': str, 'BSMTGARAGE': str, 'FINISHEDLIVINGAREA': str, 'CARDNUMBER': str, 'ALT_ID': str, 'TAXYEAR': str, 'ASOFDATE': str})
 parcel_geometry = gpd.read_file(sys.argv[2])
-census_tract_geometry = gpd.read_file(sys.argv[3], columns=['NAME'])
+census_tract_geometry = gpd.read_file(sys.argv[3])
 openavmkit_output_folder = sys.argv[4]
 
 parcel_data['USE_WITH_DESC'] = parcel_data['USECODE'] + ' ' + parcel_data['USEDESC']
@@ -91,36 +97,67 @@ parcel_data = parcel_data.merge(census_tract_land_price_per_sqft, how='left', le
 parcel_data['census_tract_lycd_land_prediction_median'] = parcel_data['land_area_sqft'] * parcel_data['census_tract_land_price_per_sqft_median']
 parcel_data['census_tract_lycd_land_prediction_mean'] = parcel_data['land_area_sqft'] * parcel_data['census_tract_land_price_per_sqft_mean']
 
-for i, row in parcel_data.iterrows():
-    # For vacant parcels and parcels where our estimated land value is greater than the total value, just use the land value as the total
-    if row['is_vacant'] == "True" or row['census_tract_lycd_land_prediction_mean'] > row['total_prediction']:
-        parcel_data.at[i, 'total_prediction'] = row['census_tract_lycd_land_prediction_mean']
+vacant_or_land_exceeds = (
+    (parcel_data['is_vacant'] == "True")
+    | (parcel_data['census_tract_lycd_land_prediction_mean'] > parcel_data['total_prediction'])
+)
+parcel_data.loc[vacant_or_land_exceeds, 'total_prediction'] = parcel_data.loc[vacant_or_land_exceeds, 'census_tract_lycd_land_prediction_mean']
 
 total_existing_residential_assessment = parcel_data.loc[parcel_data['CLASS'] == 'R', 'assessed_total'].sum()
 total_new_residential_assessment = parcel_data.loc[parcel_data['CLASS'] == 'R', 'total_prediction'].sum()
 total_residential_valuation_ratio = total_new_residential_assessment / total_existing_residential_assessment
 print('total_residential_valuation_ratio is', total_residential_valuation_ratio)
 
-for i, row in parcel_data.iterrows():
-    muni = row['MUNIDESC'].replace("  ", " ")
-    if "Ward - " in muni:
-        muni = muni.split("Ward - ")[1]
-    parcel_data.at[i, 'municipality'] = muni
-    parcel_data.at[i, 'OWNER_OCCUPIED'] = 'N'
-    if isinstance(row['SALEDATE'], str):
-        sale_date = datetime.strptime(row['SALEDATE'], "%m-%d-%Y")
-        updated_date = datetime.strptime(row['ASOFDATE'], "%d-%b-%y")
-        ownership_time = updated_date - sale_date
-        parcel_data.at[i, 'YEARS_SINCE_SALE'] = ownership_time.total_seconds() / (365 * 24 * 60 * 60)
-        if row['CLASS'] == 'R':
-            full_address = str(row['PROPERTYHOUSENUM']) + str(row['PROPERTYFRACTION']) + str(row['PROPERTYADDRESS']) + str(row['PROPERTYUNIT'])
-            if full_address.replace(" ", "") == row['CHANGENOTICEADDRESS1'].replace(" ", ""):
-                parcel_data.at[i, 'OWNER_OCCUPIED'] = 'Y'
-            if row['assessed_total'] > 0 and row['total_prediction'] > 0:
-                parcel_data.at[i, 'VALUATION_RATIO'] = (row['total_prediction'] / (row['assessed_total'] * total_residential_valuation_ratio))
-            if row['SALEDESC'] == 'VALID SALE' and sale_date.year >= 2024 and row['total_prediction'] > 0 and row['SALEPRICE'] > 0:
-                parcel_data.at[i, 'NEW_SALES_RATIO'] = (row['total_prediction'] / (row['SALEPRICE']))
-                parcel_data.at[i, 'OLD_SALES_RATIO'] = ((row['assessed_total'] * total_residential_valuation_ratio) / (row['SALEPRICE']))
+# Municipality name cleaning
+muni = parcel_data['MUNIDESC'].str.replace("  ", " ", regex=False)
+has_ward = muni.str.contains("Ward - ", na=False)
+parcel_data['municipality'] = muni.where(~has_ward, muni.str.split("Ward - ").str[1])
+
+parcel_data['OWNER_OCCUPIED'] = 'N'
+
+# Date-based columns — only where SALEDATE is present
+has_sale = parcel_data['SALEDATE'].notna() & (parcel_data['SALEDATE'] != '')
+sale_dates = pd.to_datetime(parcel_data.loc[has_sale, 'SALEDATE'], format="%m-%d-%Y", errors='coerce')
+updated_dates = pd.to_datetime(parcel_data.loc[has_sale, 'ASOFDATE'], format="%d-%b-%y", errors='coerce')
+parcel_data.loc[has_sale, 'YEARS_SINCE_SALE'] = (updated_dates - sale_dates).dt.total_seconds() / (365 * 24 * 60 * 60)
+
+is_R = parcel_data['CLASS'] == 'R'
+
+# Owner-occupied: mailing address matches property address (residential only)
+full_addr = (
+    parcel_data['PROPERTYHOUSENUM'].fillna('').astype(str)
+    + parcel_data['PROPERTYFRACTION'].fillna('').astype(str)
+    + parcel_data['PROPERTYADDRESS'].fillna('').astype(str)
+    + parcel_data['PROPERTYUNIT'].fillna('').astype(str)
+).str.replace(" ", "", regex=False)
+change_notice = parcel_data['CHANGENOTICEADDRESS1'].fillna('').str.replace(" ", "", regex=False)
+parcel_data.loc[is_R & has_sale & (full_addr == change_notice), 'OWNER_OCCUPIED'] = 'Y'
+
+# Valuation ratio (residential, both values positive)
+valid_val = is_R & has_sale & (parcel_data['assessed_total'] > 0) & (parcel_data['total_prediction'] > 0)
+parcel_data.loc[valid_val, 'VALUATION_RATIO'] = (
+    parcel_data.loc[valid_val, 'total_prediction']
+    / (parcel_data.loc[valid_val, 'assessed_total'] * total_residential_valuation_ratio)
+)
+
+# New/old sales ratios (residential, valid sales from 2024 onward with positive values)
+sale_year = pd.Series(index=parcel_data.index, dtype='float64')
+sale_year.loc[has_sale] = sale_dates.dt.year
+valid_new = (
+    is_R
+    & has_sale
+    & (parcel_data['SALEDESC'] == 'VALID SALE')
+    & (sale_year >= 2024)
+    & (parcel_data['total_prediction'] > 0)
+    & (parcel_data['SALEPRICE'] > 0)
+)
+parcel_data.loc[valid_new, 'NEW_SALES_RATIO'] = (
+    parcel_data.loc[valid_new, 'total_prediction'] / parcel_data.loc[valid_new, 'SALEPRICE']
+)
+parcel_data.loc[valid_new, 'OLD_SALES_RATIO'] = (
+    (parcel_data.loc[valid_new, 'assessed_total'] * total_residential_valuation_ratio)
+    / parcel_data.loc[valid_new, 'SALEPRICE']
+)
 
 # Land price per sqft under current assessment, scaled for comparison with new assessments
 parcel_data['current_land_price_per_sqft_adjusted'] = (parcel_data['assessed_land'] / parcel_data['land_area_sqft']) * total_residential_valuation_ratio
