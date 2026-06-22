@@ -4,7 +4,7 @@ Allegheny County, PA (FIPS 42003) property valuation models using [OpenAVMKit](h
 
 > **Disclaimer:** This is independent research in progress. All models, findings, and estimates are provided for research and educational purposes only. No warranty is made regarding accuracy, completeness, or fitness for any particular purpose. This work does not constitute professional appraisal, legal, tax, or financial advice. Results should not be relied upon for any official, legal, or financial decision, including property tax appeals. Use at your own risk.
 
-> **⚠️ Equity Testing Required — Census Variables in Model**
+> **⚠️ Equity Testing — Census Variables in Model**
 >
 > The residential models use Census tract-level variables as predictors — `median_income` and `median_g_rent` (ACS) — plus the PCRG Market Value Analysis tier `market_value_category`. These capture neighborhood market conditions but also correlate with the racial and socioeconomic composition of residents.
 >
@@ -22,7 +22,7 @@ This project builds automated valuation models (AVMs) for ~584,000 Allegheny Cou
 
 ## Current Results
 
-> **As of the 2026-06-22 build** — all five groups trained on the current feature set (geometry, `cdu_grade`, `log` MRA targets, Census `median_income`/`median_g_rent`, `market_value_category`, OSM rivers, `pct_minority`), with the residential ensembles re-blended for vertical equity. This remains independent research (see disclaimer above), not an official product. Commercial is data-starved (~43 study-period sales) — use with caution.
+> **As of the 2026-06-22 build** — all five groups trained on the current feature set (geometry, `cdu_grade`, `log` MRA targets, Census `median_income`/`median_g_rent`, `market_value_category`, OSM water proximity), with the residential ensembles re-blended for vertical equity, and the ratio study stratified by income **and** Census-tract racial composition (`pct_minority`) for equity testing (`pct_minority` is a stratification variable only, not a model input). This remains independent research (see disclaimer above), not an official product. Commercial is data-starved (~43 study-period sales) — use with caution.
 
 Per-group ratio study over the 2025–2026 study period. Ratios are `prediction / sale_price` (raw, unadjusted); because the model targets time-adjusted 2026-01-01 values and prices shifted over 2025, a well-calibrated model sits slightly below 1.0. COD = Coefficient of Dispersion (lower = more uniform assessments; IAAO residential standard ≤ 15, acceptable ≤ 20).
 
@@ -48,9 +48,9 @@ Residential models use building, land/geometry, location, and neighborhood-conte
 
 **Land & geometry** — land area (and `land_area_sqft_log`), parcel polar coordinates (radius/angle from county center), rectangularity, aspect ratio.
 
-**Spatial / location** — latitude/longitude; neighborhood, census tract, school district, municipality; spatial lag of time-adjusted sale price; proximity to OSM **rivers** (Pittsburgh's three rivers, captured as `waterway` linestrings), other water bodies, and parks; DEM-derived slope (`slope_mean_deg`).
+**Spatial / location** — latitude/longitude; neighborhood, census tract, school district, municipality; spatial lag of time-adjusted sale price; proximity to OSM water (`proximity_to_osm_water` — Pittsburgh's three rivers and streams, captured as `waterway` linestrings, plus other water bodies); DEM-derived slope (`slope_mean_deg`).
 
-**Neighborhood context (Census / market)** ⚠️ *requires equity testing — see notice above* — median household income, median gross rent (ACS), and the PCRG Market Value Analysis tier (`market_value_category`).
+**Neighborhood context (Census / market)** ⚠️ *equity-tested — see notice above* — median household income, median gross rent (ACS), and the PCRG Market Value Analysis tier (`market_value_category`).
 
 The **commercial** model additionally uses commercial rent, jobs-per-sqft (Census LODES), and building footprint.
 
@@ -63,7 +63,7 @@ Input data lives under `data/us-pa-allegheny/in/` and is **not tracked in git** 
 - **Allegheny County property assessments** (parcel attributes, assessment values, sale history) — [WPRDC](https://data.wprdc.org/dataset/property-assessments)
 - **Parcel geometry** (GeoJSON) — [PASDA](https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214)
 - **Census tract / block-group geography** — [Allegheny County GIS open data](https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-census-tracts-2020) + [WPRDC blocks](https://data.wprdc.org/dataset/allegheny-county-census-blocks-2021)
-- **US Census ACS** (FIPS 42003) — tract-level `median_income` (B19013), `median_g_rent` (B25064); `pct_minority` (B03002) wired in, pending a Stage-1 rebuild
+- **US Census ACS** (FIPS 42003) — tract-level `median_income` (B19013), `median_g_rent` (B25064) as model inputs; `pct_minority` (B03002) enriched for the equity ratio-study breakdown (stratification only, not a model input)
 - **LODES jobs by block** (`jobs_per_sqft`) — [LEHD/Census](https://lehd.ces.census.gov/data/#lodes)
 - **Building footprints & heights** — [Microsoft/Global ML Building Footprints](https://public.tableau.com/views/GlobalMLBuildingFootprintsDataWithEstimatedHeight/GlobalMLBuildingFootprints)
 - **PCRG Market Value Analysis tier** (`market_value_category`) — [WPRDC MVA 2021](https://data.wprdc.org/dataset/market-value-analysis-2021)
@@ -176,7 +176,7 @@ This controls how the assessment is actually performed.
 - "model_groups" defines the actual model groups. Parcels will be split into groups (i.e. commercial, single-family, multi-family) for both modeling and result analysis. 
 - "instructions" defines the algorithms (regression, decsision tree, etc) to use for each model group. Currently, we are using linear regression ("mra"), spatial models ("local_area", "spatial_lag_area"), and decision tree models ("lightgbm","xgboost") across all model groups.
 - "models" specifies which variables to use in the models. The linear residential models ("mra"/"multi_mra") use `land_area_sqft`, `finished_living_area_sqft`, `bldg_age_years`, `bldg_quality_num`, `bldg_condition_num`, `cdu_grade`, `slope_mean_deg` (DEM), `proximity_to_osm_water` (OSM), `polar_radius`/`polar_angle` (location geometry), `spatial_lag_sale_price_time_adj` (local market signal), and the neighborhood-context variables `median_income`, `median_g_rent` (Census ACS) and `market_value_category` (PCRG Market Value Analysis tier). The commercial linear model uses `land_area_sqft`, `commercial_rent`, `jobs_per_sqft`, `bldg_area_footprint_sqft`, `slope_mean_deg`, `proximity_to_osm_water`, `spatial_lag_sale_price_time_adj`, and `polar_radius`/`polar_angle`. The tree/ensemble models (`lightgbm`, `xgboost`, `lcomp`) use a wider "kitchen-sink" set on top of these. All variables live in the "universe" dataframe.
-  - The Census neighborhood variables (`median_income`, `median_g_rent`) and the MVA tier are used as market signals, but are paired with equity testing: the ratio study (see "analysis") breaks results down by income quintile — and by Census-tract racial composition (`pct_minority`) once that enrichment is in place — to confirm assessment ratios do not vary systematically across protected groups (per IAAO §7.3).
+  - The Census neighborhood variables (`median_income`, `median_g_rent`) and the MVA tier are used as market signals, but are paired with equity testing: the ratio study (see "analysis") breaks results down by income quintile and by Census-tract racial composition (`pct_minority`, explicit composition bands including a majority-minority >50% stratum) to confirm assessment ratios do not vary systematically across protected groups (per IAAO §7.3).
 - "analysis" and "field_classification" are used for ratio studies/results analysis.
 
 ### "ref"
