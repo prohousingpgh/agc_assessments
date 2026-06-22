@@ -37,6 +37,10 @@ if openavmkit_repo not in sys.path:
 
 locality = "us-pa-allegheny"
 ENSEMBLE_MEMBERS = ["mra", "multi_mra", "lightgbm"]
+# The fixed trio blend was validated on the residential groups. It does NOT
+# suit commercial (~60 sales, very different dynamics — empirically the trio
+# drives commercial VEI much worse), so leave commercial's own ensemble alone.
+SKIP_GROUPS = {"commercial"}
 APPLY = "--apply" in sys.argv
 
 from openavmkit.pipeline import init_notebook, load_settings, run_and_write_ratio_study_breakdowns
@@ -94,6 +98,10 @@ for pkl_path in groups:
     base = os.path.dirname(pkl_path)                 # out/models/<group>/main
     g = os.path.basename(os.path.dirname(base))      # <group>
     base = base.replace("\\", "/")
+
+    if g in SKIP_GROUPS:
+        print(f"{g:<46}{'-- skipped (SKIP_GROUPS) --':>31}")
+        continue
 
     # blends per subset
     blends = {}
