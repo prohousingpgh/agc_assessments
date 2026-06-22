@@ -165,6 +165,12 @@ for pkl_path in groups:
                 edf = edf.drop(columns=["prediction"], errors="ignore").merge(
                     b.rename(columns={"__blend__": "prediction"}), on=k, how="left")
                 edf.to_parquet(epath, index=False)
+                # Also refresh the .csv twin — downstream consumers
+                # (combineOutputFiles.py and the maps) read the CSV, not the
+                # parquet, so leaving it stale silently publishes the old
+                # all-engine ensemble. Drop geometry to keep it CSV-friendly.
+                edf.drop(columns=[c for c in ("geometry",) if c in edf.columns]).to_csv(
+                    epath[: -len(".parquet")] + ".csv", index=False)
 
 if APPLY:
     print(f"\nRegenerating ratio-study breakdowns with the new blend...")

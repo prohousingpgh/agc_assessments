@@ -10,7 +10,7 @@ Allegheny County, PA (FIPS 42003) property valuation models using [OpenAVMKit](h
 >
 > IAAO Standard on Mass Appraisal of Real Property (2017) §7.3 prohibits variables that produce racially discriminatory *outcomes* — the concern is not the input itself but the effect. Census variables can be appropriate if the resulting assessment ratios are equitable across protected groups. The key test is a ratio study stratified by income and, where data permits, by neighborhood racial composition.
 >
-> **Status:** the ratio study is stratified by income quintile (`ratio_study.breakdowns`). At the current iteration, **level equity by income passes** — the median ratio is flat (~1.0) across all income quintiles in every group. A horizontal-equity concern remains: COD (assessment *uniformity*) is ~1.4–1.7× worse in the lowest-income quintile than the highest, systematically across groups. A `pct_minority` (ACS B03002) racial-composition breakdown is wired into the settings but **pending a Stage-1 rebuild** to enrich the column. **Before any official use,** run the full stratified equity analysis and confirm ratios are within IAAO tolerances across all income and racial-composition strata. See `CLAUDE.md` for the detailed equity findings.
+> **Status:** the ratio study is stratified by income quintile **and** by Census-tract racial composition (`pct_minority`, ACS B03002, enriched and broken down by explicit composition bands including a majority-minority >50% stratum). **Level equity passes on both axes** — the median assessment ratio is flat (~1.0) across all income quintiles *and* all racial-composition bands, in every group (no systematic over- or under-assessment of higher-minority or lower-income neighborhoods). **A horizontal-equity (uniformity) concern remains:** COD is ~1.4–1.7× worse in the lowest-income / highest-minority strata, and breaches the IAAO ≤20 standard in majority-minority *older/urban* tracts (prewar reaches COD ~31 in 50–75%-minority tracts; urban ~25 in 75–100%); suburban and multi-family stay within tolerance. This appears driven by thinner, more-heterogeneous sales in those areas rather than by the demographic inputs themselves. **Before any official use,** confirm the full stratified results meet IAAO tolerances. See `CLAUDE.md` for the detailed equity findings.
 
 ## Overview
 
@@ -22,23 +22,23 @@ This project builds automated valuation models (AVMs) for ~584,000 Allegheny Cou
 
 ## Current Results
 
-> **⚠️ Provisional — iteration in progress (2026-06-21).** These numbers are from the latest in-development run and are **not** final. Caveats: the residential ensembles were just re-blended to fix vertical equity (see below); the suburban group's numbers were salvaged from a stale (pre-rivers) checkpoint and want a clean re-run; `pct_minority` is not yet enriched; commercial is data-starved (~43 study-period sales); and the published `output/` CSVs have not been regenerated against this run.
+> **As of the 2026-06-22 build** — all five groups trained on the current feature set (geometry, `cdu_grade`, `log` MRA targets, Census `median_income`/`median_g_rent`, `market_value_category`, OSM rivers, `pct_minority`), with the residential ensembles re-blended for vertical equity. This remains independent research (see disclaimer above), not an official product. Commercial is data-starved (~43 study-period sales) — use with caution.
 
 Per-group ratio study over the 2025–2026 study period. Ratios are `prediction / sale_price` (raw, unadjusted); because the model targets time-adjusted 2026-01-01 values and prices shifted over 2025, a well-calibrated model sits slightly below 1.0. COD = Coefficient of Dispersion (lower = more uniform assessments; IAAO residential standard ≤ 15, acceptable ≤ 20).
 
 | Model group | Study-period sales | This model — Median ratio | This model — COD (trimmed) | County — Median ratio | County — COD |
 |---|---|---|---|---|---|
 | Residential SF — Suburban | 5,751 | 0.96 | **10.4** | 0.50 | 13.6 |
-| Residential SF — Urban | 1,459 | 0.97 | **14.4** | 0.42 | 24.0 |
-| Residential SF — Suburban Pre-War | 1,077 | 1.00 | **18.3** | 0.49 | 17.8 |
+| Residential SF — Urban | 1,459 | 0.97 | **14.5** | 0.42 | 24.0 |
+| Residential SF — Suburban Pre-War | 1,077 | 1.00 | **18.4** | 0.49 | 17.8 |
 | Residential Multi-Family | 1,059 | 0.91 | **9.5** | 0.52 | 15.7 |
-| Commercial | 43 | 1.82 | 35.9 | 0.54 | 24.3 |
+| Commercial | 43 | 1.84 | 36.1 | 0.54 | 24.3 |
 
 The residential groups meet or approach IAAO COD standards (≤ 15, acceptable ≤ 20). Commercial is data-starved (~43 study-period sales) and should be used with caution.
 
 **Current county assessments run at roughly half of market value.** The county's median assessment ratio is ~0.42–0.54 across groups — properties are assessed at ~42–54% of modeled market value — a key input to the fairness analysis.
 
-**Vertical equity (VEI).** OpenAVMKit's default ensemble optimizes accuracy (MAPE) with no equity term, and is regressive (cheap properties over-assessed relative to expensive). The pipeline re-blends the residential ensembles to the median of `[mra, multi_mra, lightgbm]` (`scripts/run_reensemble.py`), which substantially improves VEI at no COD cost: prewar −32 → −12, urban −12 → +8, suburban −14 → −7, multi-family −11 → −6. Commercial keeps its own ensemble (the trio blend does not suit its thin data).
+**Vertical equity (VEI).** OpenAVMKit's default ensemble optimizes accuracy (MAPE) with no equity term, and is regressive (cheap properties over-assessed relative to expensive). The pipeline re-blends the residential ensembles to the median of `[mra, multi_mra, lightgbm]` (`scripts/run_reensemble.py`), which substantially improves VEI at no COD cost. Post-blend VEI: multi-family −5, suburban −7, prewar −13, urban +10 — versus the regressive all-engine default (prewar was −32). Commercial keeps its own ensemble (the trio blend does not suit its thin data).
 
 ## Features
 
