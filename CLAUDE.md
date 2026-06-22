@@ -134,14 +134,26 @@ prices — don't expect them to reconcile exactly.
 The clone at `C:/projects/openavmkit` is **shared across all three PA county projects** and
 rides whatever branch is checked out — currently **`philly-patches-0.6.0`**. Don't switch
 branches without confirming the pipeline still runs (and clear `__pycache__` after any
-switch). Local patches committed on this branch by AGC work (commit `fc9c57e`):
-- `utilities/census.py` — fetch ACS B03002, compute `pct_minority` (also upstream PR
-  larsiusprime/openavmkit#361).
-- `utilities/openstreetmap.py` — `rivers` query now also matches `waterway` linestrings
-  (Pittsburgh's three rivers are linestrings, not polygon water areas).
+switch). Local patches committed on this branch by AGC work:
+- `utilities/census.py` (`fc9c57e`) — fetch ACS B03002, compute `pct_minority`.
+  **Equity-sensitive — do NOT re-file publicly** (upstream #361 was closed at Lars's request;
+  he handles racial-composition changes privately).
+- `utilities/openstreetmap.py` (`fc9c57e`) — `rivers` query also matches `waterway`
+  linestrings (Pittsburgh's three rivers are linestrings, not polygon water areas).
+- `data.py` (`7eacf70`) — `_enrich_df_census` keeps *derived* census cols (`pct_minority`)
+  through the parcel join, not just the raw ACS fields in `get_census_map()`. **Required
+  alongside census.py for `pct_minority` to enrich.** Equity-sensitive — keep private.
+- `utilities/cache.py` (`5e719aa`) — fix `clear_cache()` malformed `.cols`/`.rows` paths.
+  Generic; safe to PR.
+- `vertical_equity_study.py` (`5f8ef07`) — fix `vei_significance` to use inner CI bounds.
+  vei_sig is now trustworthy. Generic; safe to PR.
+- `ratio_study.py` (`87fcbf3`, `b794690`) — robust quantile binning (np.nanquantile +
+  strict-monotonic edges; skips degenerate) AND a new explicit-`bins`/`bin_labels` breakdown
+  option (used for the `pct_minority` composition bands). Generic; safe to PR.
 
-Because the branch is shared, these affect Philly/Berks on their next Stage 1 too (both are
-additive).
+Because the branch is shared, all of these affect Philly/Berks on their next Stage 1/3 too
+(all additive). The generic infra fixes (cache, ratio_study, vei_sig) are upstream-PR
+candidates; the equity-sensitive ones (census.py, data.py) must NOT be PR'd publicly.
 
 ## Open issues we're tracking
 
@@ -149,10 +161,10 @@ additive).
   only `settings`. `run_03_model.py` was calling it with `sup=/verbose=` and silently
   failing at Step 10 — fixed. `scripts/run_ratio_study.py` runs the breakdowns standalone
   against trained pickles (~1 min) without re-training.
-- **`vei_significance` suspected bug** in `openavmkit/vertical_equity_study.py` (~line 61):
-  widens the CI gap instead of narrowing it, so it is **not** a real significance test —
-  do not cite it as one. Verify against a hand-computed example, then file upstream.
-  Upstream equity-testing feature request: larsiusprime/openavmkit#362.
+- **`vei_significance` — FIXED** (`5f8ef07`): was using outer CI bounds (couldn't distinguish
+  significant from non-significant regressivity); now uses inner bounds and is trustworthy.
+  (The related upstream equity-testing issue #362 was closed at Lars's request — handle
+  equity testing privately.)
 - **Bulk/multi-parcel deed contamination:** Philly found deed records stamp the full bundle
   price on every parcel, inflating vacant/commercial $/sqft ~4×; OpenAvmKit heuristics have
   a structural blind spot. **Check whether Allegheny sales data has the same structure.**
@@ -167,8 +179,12 @@ additive).
   PCRG MVA tier `market_value_category` (categorical) — **kept on condition of equity
   testing** (ratio-study breakdowns by income quintile, and `pct_minority` once enriched).
 - `ratio_study.breakdowns` include `{"by":"median_income","quantiles":5}` and
-  `{"by":"pct_minority","quantiles":5}` (the latter skips gracefully until a Stage-1 rebuild
-  enriches the column).
+  `{"by":"pct_minority","bins":[0,0.1,0.25,0.5,0.75,1.0],"bin_labels":[...]}` — explicit
+  composition bands (isolating a majority-minority >50% stratum); quantiles are degenerate on
+  zero-inflated `pct_minority`. `pct_minority` is now enriched (needs both the census.py +
+  data.py patches). **Equity result (2026-06-22):** level equity passes across income AND
+  racial composition; COD/uniformity gradient breaches IAAO ≤20 only in majority-minority
+  older/urban tracts (prewar, urban). See the `agc-rebuild-2026-06-21-night-recovery` memory.
 - **VEI fix — ensemble re-blend.** OpenAvmKit's ensemble optimizer maximizes accuracy (MAPE)
   with no equity term, so the default all-engine blend is badly regressive (prewar VEI ~−32).
   Restricting the blend to the median of `[mra, multi_mra, lightgbm]` (drop the regressive
