@@ -436,7 +436,7 @@
 				"run": ["assessor", "mra", "multi_mra", "local_area", "spatial_lag_area", "lcomp", "xgboost", "lightgbm"],
 				"__run":["lcomp", "xgboost", "lightgbm", "catboost", "ngboost"],
 				"__comment_ensemble": "Blend the run models (excluding 'assessor', which is comparison-only) into a single ensemble; 'default' is the built-in mean/median blend. The published market_value is taken from this ensemble via models.prediction below, rather than being left implicit.",
-				"ensemble": { "type": "default" },
+				"ensemble": { "type": "default", "models": ["mra", "multi_mra", "lightgbm"] },
 				"skip":{
 					"__comment": "Fast-iteration mode: model ONLY residential_single_family_suburban_prewar (smallest detached SF group; transfers to the big suburban group). Remove urban/suburban from this list to model all SF groups again."
 				}

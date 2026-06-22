@@ -50,6 +50,15 @@ Stage 3 (`run_03_model.py`) deletes all `out/checkpoints/3-model-*.pickle` on la
 checkpoint MUST be deleted** — otherwise Stage 3 rebuilds `sup` from the stale checkpoint
 that lacks the new column.
 
+**SHAP/contributions are OFF by default and must stay off for iteration.** `finalize_models`
+defaults to `do_contributions=True`, which computes slow per-engine SHAP/contribution CSVs
+*inside the training pass*. `run_03_model.py` now passes `do_contributions=False` (commit
+`5f1f46b`) so contributions are only ever computed in Step 9, gated by `DO_SHAPS` (default
+`False`). This roughly halves Stage 3 wall-clock (~40 min vs 80+). Only set `DO_SHAPS=True`
+for a final publication run (explainability / IAAO narrative) — never for metric/equity
+iteration. The 2026-06-21 runs were killed by Modern Standby partly because the un-deferred
+contributions step kept Stage 3 running long enough to hit the idle-sleep window.
+
 ### Full-rebuild sequence (Stage 1 → 3) — the enrichment-cache landmine
 
 **Verified mechanism (`openavmkit/utilities/cache.py`):** enrichment steps (census, OSM,
@@ -160,3 +169,14 @@ additive).
 - `ratio_study.breakdowns` include `{"by":"median_income","quantiles":5}` and
   `{"by":"pct_minority","quantiles":5}` (the latter skips gracefully until a Stage-1 rebuild
   enriches the column).
+- **VEI fix — ensemble re-blend.** OpenAvmKit's ensemble optimizer maximizes accuracy (MAPE)
+  with no equity term, so the default all-engine blend is badly regressive (prewar VEI ~−32).
+  Restricting the blend to the median of `[mra, multi_mra, lightgbm]` (drop the regressive
+  spatial/comparable engines) fixes it with no COD cost. Apply via
+  `python scripts/run_reensemble.py --apply` (no retrain; reads the trained per-engine preds,
+  overwrites the ensemble + regenerates the ratio study in ~1 min; dry-run without `--apply`).
+  **Commercial is in `SKIP_GROUPS`** (the trio worsens its VEI — ~60 sales, different
+  dynamics). Applied 2026-06-21: prewar −32→−12, urban −12→+8, suburban −14→−7, MF −11→−6.
+  `settings.json` also pins `ensemble.models=[trio]`, but that's currently inert — the
+  prediction path reads the wrong key (`benchmark.py` ~3114 reads `"list"` not `"models"`);
+  the permanent fix is that one-liner, after which commercial needs a per-group override.
