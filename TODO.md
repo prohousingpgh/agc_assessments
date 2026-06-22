@@ -11,9 +11,13 @@ facts and `README` for current results. Status as of 2026-06-22.
   (reversible — delete the value to restore). After reboot, `powercfg /change standby-timeout-ac 0`
   actually works. Three runs were killed by Modern Standby before this was understood;
   software keep-awake (powercfg, SetThreadExecutionState, input nudges) did **not** override it.
-- [ ] **Decide whether to commit `scripts/combineOutputFiles.py`** (and `scripts/openAvmKitInputFiles.py`).
-  These are pre-existing local modifications; `combineOutputFiles.py` *generated* the published
-  `output/` CSVs, so committing it would make the repo's output match its generator.
+- [x] **`scripts/combineOutputFiles.py` committed** (`9e1414d`) — reviewed the pre-existing
+  vectorization refactor (per-row `iterrows` → pandas masks; updated `model_groups` to the five
+  current groups; robust date parsing), restored a dropped `CLASS=='R'` guard on the
+  `NEW_SALES_RATIO`/`OLD_SALES_RATIO` columns, and committed + pushed. Repo output now matches
+  its generator.
+- [ ] **`scripts/openAvmKitInputFiles.py`** — separate Stage-0 converter, still has uncommitted
+  WIP (~17-line diff, unrelated to this publish). Decide whether to review + commit.
 - [ ] **AGENTS.md doc gotchas** — two verified notes (enrichment cache signs on inputs not code;
   ratio-study uses raw `sale_price` while VEI uses `dep_var`) are committed on the openavmkit
   `philly-patches-0.6.0` branch (`2b14007`). PR-able upstream — diff against upstream's AGENTS.md
