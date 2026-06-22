@@ -50,11 +50,10 @@ steep_slopes = gpd.read_file(sys.argv[6])
 flood_zones = gpd.read_file(sys.argv[7])
 undermined = gpd.read_file(sys.argv[8])
 city_boundary = gpd.read_file(sys.argv[9])
-crexi_data = gpd.read_file(sys.argv[10])
-city_council_districts = gpd.read_file(sys.argv[11])
-county_council_districts = gpd.read_file(sys.argv[12])
-census_blocks = gpd.read_file(sys.argv[13])
-jobs_per_block = pd.read_csv(sys.argv[14], dtype={'w_geocode': str, 'C000': float})
+city_council_districts = gpd.read_file(sys.argv[10])
+county_council_districts = gpd.read_file(sys.argv[11])
+census_blocks = gpd.read_file(sys.argv[12])
+jobs_per_block = pd.read_csv(sys.argv[13], dtype={'w_geocode': str, 'C000': float})
 
 parcel_data.rename(columns={'PARID': 'PARCEL_ID'}, inplace=True)
 parcel_geometry.rename(columns={'PIN': 'PARCEL_ID'}, inplace=True)
@@ -128,7 +127,10 @@ census_blocks['CENSUS_BLOCK_JOBS_PER_SQFT'] = census_blocks['CENSUS_BLOCK_JOB_CO
 census_blocks = census_blocks.to_crs('EPSG:3857')
 parcel_geometry_distance['geometry_circle'] = parcel_geometry_distance['centroid'].buffer(500)
 parcel_geometry_distance.set_geometry('geometry_circle', inplace=True)
-nearby_blocks = gpd.sjoin(parcel_geometry_distance, census_blocks, how='left', rsuffix='_block')
+# Use slim GeoDataFrames to avoid OOM during the many-to-many spatial join
+parcel_slim = parcel_geometry_distance[['PARCEL_ID', 'geometry_circle']].copy()
+census_blocks_slim = census_blocks[['CENSUS_BLOCK_JOBS_PER_SQFT', 'geometry']].copy()
+nearby_blocks = gpd.sjoin(parcel_slim, census_blocks_slim, how='left', rsuffix='_block')
 nearby_blocks = nearby_blocks.groupby(['PARCEL_ID']).agg(JOBS_PER_SQFT=('CENSUS_BLOCK_JOBS_PER_SQFT', 'mean'), JOINED_BLOCKS=('CENSUS_BLOCK_JOBS_PER_SQFT', 'count'))
 parcel_geometry_distance = parcel_geometry_distance.merge(nearby_blocks, how='left', on='PARCEL_ID')
 
@@ -154,7 +156,8 @@ for i, row in parcel_data.iterrows():
                 if len(values_list) >= 5 or (len(values_list) >= 1 and distance > 1000):
                     break
                 values_list.append(commercial_rents_gdf.loc[parcel_id]['PRICE'])
-            parcel_data.at[i, 'COMMERCIALRENT'] = sum(values_list) / float(len(values_list))
+            if values_list:
+                parcel_data.at[i, 'COMMERCIALRENT'] = sum(values_list) / float(len(values_list))
 
 pd.set_option('display.max_columns', None)
 print(parcel_data.head())
