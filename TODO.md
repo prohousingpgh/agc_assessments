@@ -19,10 +19,16 @@ facts and `README` for current results. Status as of 2026-06-22.
 - [x] **`scripts/openAvmKitInputFiles.py` committed** (`f195bd2`) — Stage-0 converter WIP: drop
   unused crexi input (matches README), slim the jobs sjoin to avoid OOM, guard empty
   COMMERCIALRENT. Reviewed + committed; not run-validated this session (Stage 0 not re-run).
-- [ ] **Track the untracked pipeline wrapper scripts?** `scripts/run_01_assemble.py`,
-  `scripts/run_02_clean.py`, `run_combine.py`, `run_geo_parquets.py`, `run_preprocessing.py` are
-  untracked, even though `run_03_model.py` / `run_ratio_study.py` / `run_reensemble.py` are
-  tracked. Tracking Stage 1/2 + the wrappers would make the full pipeline reproducible from git.
+- [x] **Pipeline wrapper scripts tracked** (`1c1d904`) — run_01_assemble, run_02_clean, run_combine,
+  run_geo_parquets, run_preprocessing committed. Full pipeline (Stage 0→3 + publish) now in git.
+- [ ] **Fix the stale preprocessing wrappers** — `run_geo_parquets.py` and `run_preprocessing.py`
+  target the pre-reorg path `C:/projects/openavmkit/notebooks/pipeline/data/us-pa-allegheny/in`
+  (a separate, near-empty dir — not symlinked) and write parquets **flat**, whereas the live
+  layout is `agc_assessments/data/us-pa-allegheny/in/` with geo parquets under `in/geo/`. Update
+  both before next regenerating inputs: change the `chdir`/output base to the agc `in/`, and route
+  the parquets to `in/geo/` (for `run_preprocessing`, that means `openAvmKitInputFiles.py` should
+  write its `.parquet` outputs under `geo/`). `run_01`/`run_02` (via `init_notebook`) and
+  `run_combine` already target the correct agc paths.
 - [ ] **AGENTS.md doc gotchas** — two verified notes (enrichment cache signs on inputs not code;
   ratio-study uses raw `sale_price` while VEI uses `dep_var`) are committed on the openavmkit
   `philly-patches-0.6.0` branch (`2b14007`). PR-able upstream — diff against upstream's AGENTS.md
