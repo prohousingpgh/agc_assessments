@@ -8,26 +8,43 @@ Instructions for downloading and installing OpenAvmKit are available at https://
 # Download following files
 
 The followed data input files are used with OpenAvmKit:<br>
-Allgheny County property assessment csv: https://data.wprdc.org/dataset/property-assessments<br>
-Allgheny County parcel GeoJSON: https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214<br>
-Allgheny County census tract GeoJSON: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-census-tracts-2020<br>
-Allegheny County census block boundaries: https://data.wprdc.org/dataset/allegheny-county-census-blocks-2021<br>
-Allegheny County jobs by census block: https://lehd.ces.census.gov/data/#lodes<br>
-Pittsburgh Undermined overlay (Pittsburgh only, not the whole county - will be ignored for modeling outside of Pittsburgh): https://data.wprdc.org/dataset/undermined-areas<br>
-Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
-Run this script, which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
-python scripts/getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson
+1. Allegheny County property assessment csv: https://data.wprdc.org/dataset/property-assessments<br>
+Click "Property Assessments Parcel Data (for downloads)", select the Download drop down arrow, select "csv" - rename to "allegheny_county_master_file.csv" <br>
+2. Allegheny County parcel GeoJSON: https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214<br>
+Download GeoJSON - Will save as "AlleghenyCounty_ParcelsYYYYMM.geojson" (with YYYY as year and MM as month downloaded, e.g. AlleghenyCounty_Parcels202511.geojson for a file downloaded November 2025) <br>
+3. Allegheny County census tract GeoJSON: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-census-tracts-2020<br>
+Under GeoJSON, click "Download" - will save as "Allegheny_County_Census_Tracts_2020_NNNNNNNNNNNNNNNNNNN.geojson" (NNNNNNNNNNNNNNNNNNN is a number that will vary between users) <br>
+4. Allegheny County census block boundaries: https://data.wprdc.org/dataset/allegheny-county-census-blocks-2021<br>
+Select the Download drop down arrow, select "json" - rename to "census_blocks_2020.geojson" <br>
+5. Allegheny County jobs by census block: https://lehd.ces.census.gov/data/#lodes<br>
+[Is this WAC?] <br>
+6. Pittsburgh Undermined overlay (Pittsburgh only, not the whole county - will be ignored for modeling outside of Pittsburgh): https://data.wprdc.org/dataset/undermined-areas<br>
+Click "GeoJSON", select the Download drop down arrow, select "JSON" - rename to "undermined.geojson" <br>
+7. Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
+Click "GeoJSON", Click "Go to Resource", a file named "CityBoundary_-NNNNNNNNNNNNNNNNNNN.geojson" will download, rename to "CityBoundary.geojson" <br>
+8. After downloading the data in steps 1 and 2, run this script (remember to update "AlleghenyCounty_ParcelsYYYYMM.geojson" filename), which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
+python scripts/getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_ParcelsYYYYMM.geojson <br>
+Will save as "commercial_rents.csv" <br>
 
 The following data input files are used for the graphs in the report, but are not currently used in the actual modeling: <br>
-City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
-County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
+9. City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
+10. County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
 
 The following data input files are not currently used in our assessment analysis. However, they are converted into OpenAVMKit-compatible files by our pre-processing script, and could easily be added to our models in the future:<br>
-Allgheny County market value categories: https://data.wprdc.org/dataset/market-value-analysis-2021<br>
-Pittsburgh Flood zones: https://data.wprdc.org/dataset/2014-fema-flood-zones<br>
+11. Allgheny County market value categories: https://data.wprdc.org/dataset/market-value-analysis-2021<br>
+mva.geojson <br>
+12. Pittsburgh Flood zones: https://data.wprdc.org/dataset/2014-fema-flood-zones<br>
+flood_zones.geojson <br>
 Note that the flood zone overlay is for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis. <br>
-Commercial parcel data can be obtained by extracting json responses from the search page of Crexi (https://www.crexi.com/search). These responses can be combined into a csv using this script: <br>
-python scripts/processCrexiData.py
+13. Commercial parcel data can be obtained by extracting json responses from the search page of Crexi (https://www.crexi.com/search). These responses can be combined into a csv using this script: <br>
+python scripts/processCrexiData.py <br>
+Will save as "crexi_data.csv" <br>
+
+## Files downloaded after above steps
+allegheny_county_master_file.csv
+AlleghenyCounty_ParcelsYYYYMM.geojson
+Allegheny_County_Census_Tracts_2020_NNNNNNNNNNNNNNNNNNN.geojson
+commercial_rents.csv
 
 # Convert Data into Usuable Format
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
