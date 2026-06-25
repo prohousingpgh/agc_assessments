@@ -150,9 +150,9 @@ residential_predictions.csv - our predicted values of all residential parcels in
 school_district_valuation_ratios.csv - median valuation ratio for every school district in Allegheny County
 
 # Scripts
-combineOutputFiles.py - I know this contains the land value algorithm, but what else does it do?
-compareAssessmentFiles.py - what does this do?
-getCommercialRents.py - uses commercial rents scraped from loopnet.com to create a commercial_rents.csv (should we included this in outputs or is it too large?)
-openAvmKitInputFiles.py - converts downloaded files into the format which OpenAvmKit uses
-processCrexiData.py - combines commercial parcel data scraped from Crexi
+combineOutputFiles.py - I know this contains the land value algorithm, but what else does it do? <br>
+compareAssessmentFiles.py - what does this do? <br>
+getCommercialRents.py - uses commercial rents scraped from loopnet.com to create a commercial_rents.csv (should we included this in outputs or is it too large?) <br>
+openAvmKitInputFiles.py - converts downloaded files into the format which OpenAvmKit uses <br>
+processCrexiData.py - combines commercial parcel data scraped from Crexi <br>
 
