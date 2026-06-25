@@ -17,7 +17,7 @@ Under GeoJSON, click "Download" - will save as "Allegheny_County_Census_Tracts_2
 4. Allegheny County census block boundaries: https://data.wprdc.org/dataset/allegheny-county-census-blocks-2021<br>
 Select the Download drop down arrow, select "json" - rename to "census_blocks_2020.geojson" <br>
 5. Allegheny County jobs by census block: https://lehd.ces.census.gov/data/#lodes<br>
-    to lehd.ces.census.gov/data/lodes/, click "LODES8/", click "pa/", click "wac/", download "pa_wac_S000_JT00_2023.csv.gz" <br>
+Go to lehd.ces.census.gov/data/lodes/, click "LODES8/", click "pa/", click "wac/", download "pa_wac_S000_JT00_2023.csv.gz" <br>
 6. Pittsburgh Undermined overlay (Pittsburgh only, not the whole county - will be ignored for modeling outside of Pittsburgh): https://data.wprdc.org/dataset/undermined-areas<br>
 Click "GeoJSON", select the Download drop down arrow, select "JSON" - rename to "undermined.geojson" <br>
 7. Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
