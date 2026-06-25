@@ -28,7 +28,9 @@ Will save as "commercial_rents.csv" <br>
 
 The following data input files are used for the graphs in the report, but are not currently used in the actual modeling: <br>
 9. City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
+Click "GeoJSON", select the Download drop down arrow, select "JSON" - rename to "city_council_districts_2022.geojson" <br>
 10. County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
+Click "GeoJSON", select the Download drop down arrow, select "JSON" - rename to "County_Council_Districts.geojson" <br>
 
 The following data input files are not currently used in our assessment analysis. However, they are converted into OpenAVMKit-compatible files by our pre-processing script, and could easily be added to our models in the future:<br>
 11. Allgheny County market value categories: https://data.wprdc.org/dataset/market-value-analysis-2021<br>
@@ -51,7 +53,7 @@ CityBoundary.geojson <br>
 commercial_rents.csv <br>
 
 city_council_districts_2022.geojson <br>
-County_Council_Districts_-7561056125954294637.geojson <br>
+County_Council_Districts.geojson <br>
 
 mva.geojson <br>
 flood_zones.geojson <br>
@@ -62,7 +64,7 @@ crexi_data.csv <br>
 
 # Convert Data into Usuable Format
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
-python scripts/OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv city_council_districts_2022.geojson County_Council_Districts_-7561056125954294637.geojson census_blocks_2020.geojson pa_wac_S000_JT00_2023.csv
+python scripts/OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv city_council_districts_2022.geojson County_Council_Districts.geojson census_blocks_2020.geojson pa_wac_S000_JT00_2023.csv
 
 This should generate 8 files:<br>
 parcels.csv<br>
