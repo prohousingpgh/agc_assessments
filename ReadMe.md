@@ -142,12 +142,12 @@ There is a set of Jupyter notebooks in OpenAvmKit that walk users through the pr
 A sample final results file, residential_predictions.csv, is available in this repository.
 
 # Output
-allegheny_county_parcel_data_sanity_check.csv - a csv of 100 randomly selected parcels in Allegheny County
-census_tract_land_price_per_sqft.csv - a csv of land value per square foot for all census tracts in Allegheny County
-commercial_existing_valuations.csv  -  existing commercial assessment data, formatted similar to residential_predictions.csv.
-municipality_valuation_ratios.csv - median valuation ratio for every muncicipality in Allegheny County
-residential_predictions.csv - our predicted values of all residential parcels in Allegheny County
-school_district_valuation_ratios.csv - median valuation ratio for every school district in Allegheny County
+allegheny_county_parcel_data_sanity_check.csv - a csv of 100 randomly selected parcels in Allegheny County<br>
+census_tract_land_price_per_sqft.csv - a csv of land value per square foot for all census tracts in Allegheny County<br>
+commercial_existing_valuations.csv  -  existing commercial assessment data, formatted similar to residential_predictions.csv.<br>
+municipality_valuation_ratios.csv - median valuation ratio for every muncicipality in Allegheny County<br>
+residential_predictions.csv - our predicted values of all residential parcels in Allegheny County<br>
+school_district_valuation_ratios.csv - median valuation ratio for every school district in Allegheny County<br>
 
 # Scripts
 combineOutputFiles.py - retrieves the files for individual model groups from the OpenAVMKit data and collates it all into the final data files. Also computes the valuation ratios at the council districts, school districts, and municipalities (needed for creating maps in the report). Outputs: census_tract_land_price_per_sqft.csv, commercial_existing_valuations.csv, residential_predictions.csv, municipality_valuation_ratios.csv, school_district_valuation_ratios.csv. <br>
