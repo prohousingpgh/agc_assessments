@@ -144,7 +144,7 @@ A sample final results file, residential_predictions.csv, is available in this r
 # Output
 allegheny_county_parcel_data_sanity_check.csv - a csv of 100 randomly selected parcels in Allegheny County
 census_tract_land_price_per_sqft.csv - a csv of land value per square foot for all census tracts in Allegheny County
-commercial_existing_valuations.csv 
+commercial_existing_valuations.csv  - where does this come from?
 municipality_valuation_ratios.csv - median valuation ratio for every muncicipality in Allegheny County
 residential_predictions.csv - our predicted values of all residential parcels in Allegheny County
 school_district_valuation_ratios.csv - median valuation ratio for every school district in Allegheny County
