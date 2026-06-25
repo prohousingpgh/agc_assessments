@@ -30,7 +30,7 @@ The following data input files are used for the graphs in the report, but are no
 9. City council districts: https://data.wprdc.org/dataset/city-council-districts-2012<br>
 Click "GeoJSON", select the Download drop down arrow, select "JSON" - rename to "city_council_districts_2022.geojson" <br>
 10. County council districts: https://openac-alcogis.opendata.arcgis.com/datasets/AlCoGIS::allegheny-county-council-districts<br>
-Click "GeoJSON", select the Download drop down arrow, select "JSON" - rename to "County_Council_Districts.geojson" <br>
+Under GeoJSON, click "Download" - will save as "Council_Districts_-NNNNNNNNNNNNNNNNNNN.geojson" (NNNNNNNNNNNNNNNNNNN is a number that will vary between users)- rename to "County_Council_Districts.geojson" <br>
 
 The following data input files are not currently used in our assessment analysis. However, they are converted into OpenAVMKit-compatible files by our pre-processing script, and could easily be added to our models in the future:<br>
 11. Allgheny County market value categories: https://data.wprdc.org/dataset/market-value-analysis-2021<br>
