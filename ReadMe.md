@@ -7,7 +7,7 @@ Instructions for downloading and installing OpenAvmKit are available at https://
 
 # Download following files
 
-The followed data input files are used with OpenAvmKit:<br>
+To downloand the data input files, follow these steps:<br>
 1. Allegheny County property assessment csv: https://data.wprdc.org/dataset/property-assessments<br>
 Click "Property Assessments Parcel Data (for downloads)", select the Download drop down arrow, select "csv" - rename to "allegheny_county_master_file.csv" <br>
 2. Allegheny County parcel GeoJSON: https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214<br>
@@ -41,10 +41,24 @@ python scripts/processCrexiData.py <br>
 Will save as "crexi_data.csv" <br>
 
 ## Files downloaded after above steps
-allegheny_county_master_file.csv
-AlleghenyCounty_ParcelsYYYYMM.geojson
-Allegheny_County_Census_Tracts_2020_NNNNNNNNNNNNNNNNNNN.geojson
-commercial_rents.csv
+allegheny_county_master_file.csv <br>
+AlleghenyCounty_ParcelsYYYYMM.geojson <br>
+Allegheny_County_Census_Tracts_2020_NNNNNNNNNNNNNNNNNNN.geojson <br>
+census_blocks_2020.geojson <br>
+pa_wac_S000_JT00_2023.csv <br>
+undermined.geojson <br>
+CityBoundary.geojson <br>
+commercial_rents.csv <br>
+
+city_council_districts_2022.geojson <br>
+County_Council_Districts_-7561056125954294637.geojson <br>
+
+mva.geojson <br>
+flood_zones.geojson <br>
+crexi_data.csv <br>
+
+
+
 
 # Convert Data into Usuable Format
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
