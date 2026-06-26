@@ -5,11 +5,11 @@ For any questions, please contact Connor Schwartz (Connor.Schwartz98@gmail.com).
 
 Instructions for downloading and installing OpenAvmKit are available at https://www.OpenAvmKit.com/
 
-Due to data size limitations, we do not all files used in the assessment analyis in this GitHub repo. Instead, we include step-by-step instructions on how to download the files to a local machine and use the OpenAVMKit to generate predicted assessments. 
+Due to data size limitations, we haven't included all files used in the assessment analyis in this GitHub repo. Instead, we include step-by-step instructions on how to download the files to a local machine and use OpenAVMKit to generate predicted assessments. 
 
 # Download following files
 
-To downloand the data input files, follow these steps:<br>
+To download the data input files, follow these steps:<br>
 1. Allegheny County property assessment csv: https://data.wprdc.org/dataset/property-assessments<br>
 Click "Property Assessments Parcel Data (for downloads)", select the Download drop down arrow, select "csv" - rename to "allegheny_county_master_file.csv" <br>
 2. Allegheny County parcel GeoJSON: https://www.pasda.psu.edu/uci/DataSummary.aspx?dataset=1214<br>
@@ -80,7 +80,7 @@ flood_zones.parquet (currently not used for modeling)<br>
 
 # OpenAvmKit settings
 
-The settings.json file controls how data is read and used by OpenAvmKit. Here are some details on the sections of this file and how I filled them out:
+The settings.json file controls how data is read and used by OpenAvmKit. Here are some details on the sections of this file and how we filled them out:
 
 ### "locality"
 
@@ -146,7 +146,7 @@ allegheny_county_parcel_data_sanity_check.csv - a csv of 100 randomly selected p
 census_tract_land_price_per_sqft.csv - a csv of land value per square foot for all census tracts in Allegheny County<br>
 commercial_existing_valuations.csv  -  existing commercial assessment data, formatted similar to residential_predictions.csv.<br>
 commercial_rents.csv - commercial rent data from Loopnet that we used in our modeling.<br>
-municipality_valuation_ratios.csv - median valuation ratio for every muncicipality in Allegheny County<br>
+municipality_valuation_ratios.csv - median valuation ratio for every municipality in Allegheny County<br>
 residential_predictions.csv - our predicted values of all residential parcels in Allegheny County<br>
 school_district_valuation_ratios.csv - median valuation ratio for every school district in Allegheny County<br>
 
