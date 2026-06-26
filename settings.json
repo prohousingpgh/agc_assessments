@@ -125,7 +125,7 @@
 				}
 			},
 			"market_value": {
-				"__comment": "Load in market value data from https://data.wprdc.org/dataset/market-value-analysis-2021 (not currently used in our models)",
+				"__comment": "Load in market value data from https://data.wprdc.org/dataset/market-value-analysis-2021",
 				"filename": "geo/market_value.parquet",
 				"dupes": "allow",
 				"load": {
@@ -141,7 +141,7 @@
 				}
 			},
 			"undermined": {
-				"__comment": "Load in undermined data from https://data.wprdc.org/dataset/undermined-areas (not currently used in our models)",
+				"__comment": "Load in undermined data from https://data.wprdc.org/dataset/undermined-areas",
 				"filename": "geo/undermined.parquet",
 				"dupes": "allow",
 				"load": {
@@ -460,7 +460,7 @@
 							"spatial_lag_sale_price_time_adj"
 						]
 					},
-					"__comment_trees": "Tree/ensemble models (gradient-boosted xgboost/lightgbm/catboost, plus ngboost which also yields a per-parcel prediction_std). All share the wide kitchen-sink ind_vars_tree list (same as lcomp) - trees tolerate redundancy/collinearity and NaNs, so no fill rules or lean lists needed; they stay in PRICE space (no log flag - trees do not extrapolate negative). n_trials is the Optuna search budget per model (deterministic + crash-resumable). catboost is by far the slowest (CPU-only here for reproducibility; GPU catboost is non-deterministic) - lower its n_trials or remove it if iteration gets slow.",
+					"__comment_trees": "ML/Tree models (xgboost/lightgbm/catboost/lcomp/ngboost). All share the wide kitchen-sink ind_vars_tree list - trees tolerate redundancy/collinearity and NaNs, so no fill rules or lean lists needed. n_trials is the Optuna search budget per model (deterministic + crash-resumable). catboost is by far the slowest (CPU-only here for reproducibility; GPU catboost is non-deterministic) - lower its n_trials or remove it if iteration gets slow.",
 					"lcomp": { "ind_vars": "$$ref.ind_vars_tree_commercial" },
 					"xgboost":  { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree_commercial" },
 					"lightgbm": { "n_trials": 25, "ind_vars": "$$ref.ind_vars_tree_commercial" },
@@ -593,6 +593,8 @@
 				{"by": "finished_living_area_sqft", "quantiles": 10},
 				{"by": "bldg_year_built", "slice_size": 10},
 				{"by": "land_area_sqft", "quantiles":  10},
+				{"by": "median_income", "quantiles": 5},
+				{"by": "pct_minority", "bins": [0, 0.1, 0.25, 0.5, 0.75, 1.0], "bin_labels": ["0-10%", "10-25%", "25-50%", "50-75%", "75-100%"]},
 				{"by": "<loc_neighborhood>"},
 				{"by": "<loc_market_area>"},
 				{"by": "<loc_region>"}
