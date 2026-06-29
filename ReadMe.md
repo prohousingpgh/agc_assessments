@@ -151,6 +151,8 @@ There is a set of Jupyter notebooks in OpenAvmKit that walk users through the pr
 # Results
 A sample final results file, **residential_predictions.csv**, is available in this repository.
 
+**Maps** - HD versions of all maps found in the report are available at: https://drive.google.com/file/d/1xESDpze1jgKntGUUayGhXKENey14PpIb/view?usp=sharing
+
 # Output
 **allegheny_county_parcel_data_sanity_check.csv** - a csv of 100 randomly selected parcels in Allegheny County<br>
 **census_tract_land_price_per_sqft.csv** - a csv of land value per square foot for all census tracts in Allegheny County<br>
