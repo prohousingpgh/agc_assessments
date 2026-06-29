@@ -1,7 +1,17 @@
-# Introduction
+# Tax Assessments Report
 
-This ReadMe contains step-by-step instructions for replicating the assessments found in this repository and used in Pro-Housing Pittsburgh's report on Tax Assessments.
-For any questions, please contact Connor Schwartz (Connor.Schwartz98@gmail.com).
+[Modernizing Property Tax Assessments in Allegheny County][*put link here*]
+
+# Executive Summary of Report
+
+Allegheny County has gone nearly half a century without regular countywide property assessments, creating a growing gap between assessed values and actual market conditions. As county leaders consider legislation to mandate regular reassessments, Pro-Housing Pittsburgh conducted a preliminary reassessment analysis using the Center for Land Economics’ toolkits and publicly available data. Our sales ratio analysis indicates that reassessment would likely shift assessed values upward more in the City of Pittsburgh than in the surrounding suburbs. Within the City, neighborhoods that have seen strong recent demand growth, including Lawrenceville and Bloomfield, would likely experience larger increases relative to the citywide average. We estimate that a regular reassessment program could be administered by the County at cost of  roughly $1 million per year, with plausible annual welfare gains of $25 million to $90 million.
+Our work here shows that a relatively small team with limited time, working for free with the county's available data can produce assessments of similar or higher quality to the existing assessments.  With improvements to data quality and more nuanced modeling, we expect significant improvements in assessments. We recommend that the County mandate regular reassessments, that they keep the work in house, and commit to using open source data and transparent methodology. 
+
+# About this Repository
+
+This ReadMe contains step-by-step instructions for replicating the assessments found in this repository and used in Pro-Housing Pittsburgh's report on Tax Assessments, as well as the report itself.
+For any questions on replicating assessments, please contact Connor Schwartz (Connor.Schwartz98@gmail.com).
+For any other questions on the report, please contact Jack Billings (John.H.Billings@gmail.com) or Pro-Housing Pittsburgh (ProHousingPGH@gmail.com).
 
 Instructions for downloading and installing OpenAvmKit are available at https://www.OpenAvmKit.com/
 
@@ -25,7 +35,7 @@ Click "GeoJSON", select the Download drop down arrow, select "JSON" - rename to 
 7. Pittsburgh city limits: https://data.wprdc.org/dataset/pittsburgh-city-boundary<br>
 Click "GeoJSON", Click "Go to Resource", a file named "CityBoundary_-NNNNNNNNNNNNNNNNNNN.geojson" will download, rename to "CityBoundary.geojson" <br>
 8. Allegheny County market value categories: https://data.wprdc.org/dataset/market-value-analysis-2021<br>
-mva.geojson <br>
+Click "MVA geojson", select the Download drop down arrow, select "JSON" - rename to "mva.geojson" <br>
 9. After downloading the data in steps 1 and 2, run this script (remember to update "AlleghenyCounty_ParcelsYYYYMM.geojson" filename), which uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file:<br>
 python scripts/getCommercialRents.py allegheny_county_master_file.csv AlleghenyCounty_ParcelsYYYYMM.geojson <br>
 Will save as "commercial_rents.csv" <br>
@@ -38,7 +48,7 @@ Under GeoJSON, click "Download" - will save as "Council_Districts_-NNNNNNNNNNNNN
 
 The following data input files are not currently used in our assessment analysis. However, they are converted into OpenAVMKit-compatible files by our pre-processing script, and could easily be added to our models in the future:<br>
 12. Pittsburgh Flood zones: https://data.wprdc.org/dataset/2014-fema-flood-zones<br>
-flood_zones.geojson <br>
+Click "GeoJSON", select the Download drop down arrow, select "JSON" - rename to "flood_zones.geojson" <br>
 Note that the flood zone overlay is for Pittsburgh, not all of Allegheny County. The values outside Pittsburgh will be marked Unknown during analysis. <br>
 13. Commercial parcel data can be obtained by extracting json responses from the search page of Crexi (https://www.crexi.com/search). These responses can be combined into a csv using this script: <br>
 python scripts/processCrexiData.py <br>
@@ -66,7 +76,7 @@ crexi_data.csv <br>
 
 # Convert Data into Usable Format
 Run this script to convert these files into the format which OpenAvmKit uses:<br>
-python scripts/OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_Parcels202511.geojson Allegheny_County_Census_Tracts_2020_2192142189737482778.geojson commercial_rents.csv mva.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv city_council_districts_2022.geojson County_Council_Districts.geojson census_blocks_2020.geojson pa_wac_S000_JT00_2023.csv
+python scripts/OpenAvmKitInputFiles.py allegheny_county_master_file.csv AlleghenyCounty_ParcelsYYYYMM.geojson Allegheny_County_Census_Tracts_2020_NNNNNNNNNNNNNNNNNNN.geojson commercial_rents.csv mva.geojson flood_zones.geojson undermined.geojson CityBoundary.geojson crexi_data.csv city_council_districts_2022.geojson County_Council_Districts.geojson census_blocks_2020.geojson pa_wac_S000_JT00_2023.csv
 
 This should generate 8 files:<br>
 parcels.csv<br>
@@ -155,3 +165,30 @@ A sample final results file, **residential_predictions.csv**, is available in th
 **getCommercialRents.py** - uses commercial rents scraped from loopnet.com to create a commercial_rents.csv file <br>
 **openAvmKitInputFiles.py** - converts downloaded files into the format which OpenAvmKit uses. See "Convert Data into Usable Format" above. <br>
 **processCrexiData.py** - combines commercial parcel data scraped from Crexi. Outputs:  crexi_data.csv<br>
+
+# The report was authored by
+
+Jack Billings (University of East Anglia, Pro-Housing Pittsburgh) and Connor Schwartz (Pro-Housing Pittsburgh)
+
+# Special Thanks To
+
+We thank Lars Doucet of the Center for Land Economics for his assistance with property valuation modeling, Professor Robert Strauss of Carnegie Mellon University for his advice regarding Allegheny County property assessment data, and the Western Pennsylvania Regional Data Center for maintaining historical archives of assessment and sales data used in this analysis.
+
+We thank Dr. Josie Faass and Dr. Russell Richie of the Progress and Poverty Institute, Jack Farrell of YIMBY Law, Prof Zhou Yang of Robert Morris University, Prof Daniel Murphy of the University of Virginia, Prof Cory Smith of the University of Maryland, and Prof David Zuckerman of Central Washington University for their helpful comments.
+
+We also thank David Vatz, who led and served as the primary developer of the interactive Explorer application accompanying this report. Additional contributions to the Explorer application were provided by Ben Lyons, Nick Rizzio, Amy Zaiss, and other volunteers associated with Pro-Housing Pittsburgh. We are grateful to these contributors for their work on software development, data visualization, testing, and user experience design.
+
+&copy; 2026 Pro-Housing Pittsburgh
+
+# License 
+
+Shield: [![CC BY-NC 4.0][cc-by-nc-shield]][cc-by-nc]
+
+This work is licensed under a
+[Creative Commons Attribution-NonCommercial 4.0 International License][cc-by-nc].
+
+[![CC BY-NC 4.0][cc-by-nc-image]][cc-by-nc]
+
+[cc-by-nc]: https://creativecommons.org/licenses/by-nc/4.0/
+[cc-by-nc-image]: https://licensebuttons.net/l/by-nc/4.0/88x31.png
+[cc-by-nc-shield]: https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg
