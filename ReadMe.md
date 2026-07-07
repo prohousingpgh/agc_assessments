@@ -1,6 +1,6 @@
 # Tax Assessments Report
 
-[Modernizing Property Tax Assessments in Allegheny County](https://www.dropbox.com/scl/fi/g9azoqpoap9mqj7o88gxb/2026-07-07_Modern_Allegheny_County_Reassessment.pdf?rlkey=ljv9dhvit40wf1ry4xoclmzus&dl=0)
+[Modernizing Property Tax Assessments in Allegheny County](https://www.dropbox.com/scl/fi/g9azoqpoap9mqj7o88gxb/2026-07-07_Modern_Allegheny_County_Reassessment.pdf?rlkey=ljv9dhvit40wf1ry4xoclmzus&st=9mn4wgz8&dl=0)
 
 # Executive Summary of Report
 
