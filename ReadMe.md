@@ -173,7 +173,7 @@ A sample final results file, **residential_predictions.csv**, is available in th
 Jack Billings (University of East Anglia, Pro-Housing Pittsburgh) and Connor Schwartz (Pro-Housing Pittsburgh)
 
 # Use of AI Assistance
-The authors used OpenAI's ChatGPT (GPT-5.5) during the preparation of this report as a research and writing assistant. The system was used to brainstorm ideas, identify literature and public sources for subsequent verification, challenge arguments, and improve clarity of writing. Every cited source was reviewed directly by the author, all calculations were independently reproduced, and the final text and conclusions are solely the author's responsibility.
+The authors used OpenAI's ChatGPT (GPT-5.5) during the preparation of this report as a research and writing assistant. The system was used to brainstorm ideas, identify literature and public sources for subsequent verification, challenge arguments, and improve clarity of writing. . Cursor was used to assist in developing portions of the code for the Explorer application. AI was not used for developing the code for the assessments. Every cited source was reviewed directly by the authors, all calculations were independently reproduced, and the final text and conclusions are solely the authors' responsibility.
 
 # Special Thanks To
 
