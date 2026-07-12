@@ -1,6 +1,7 @@
 import geopandas as gpd
 import pandas as pd
 import sys
+import numpy as np
 from pathlib import Path
 from datetime import datetime
 
@@ -121,6 +122,9 @@ for i, row in parcel_data.iterrows():
             if row['SALEDESC'] == 'VALID SALE' and sale_date.year >= 2024 and row['total_prediction'] > 0 and row['SALEPRICE'] > 0:
                 parcel_data.at[i, 'NEW_SALES_RATIO'] = (row['total_prediction'] / (row['SALEPRICE']))
                 parcel_data.at[i, 'OLD_SALES_RATIO'] = ((row['assessed_total'] * total_residential_valuation_ratio) / (row['SALEPRICE']))
+
+parcel_data['IS_MCKEESPORT'] = np.where(parcel_data['municipality'] == 'McKEESPORT', 1, 0)
+parcel_data['IS_CLAIRTON'] = np.where(parcel_data['municipality'] == 'CLAIRTON', 1, 0)
 
 # Land price per sqft under current assessment, scaled for comparison with new assessments
 parcel_data['current_land_price_per_sqft_adjusted'] = (parcel_data['assessed_land'] / parcel_data['land_area_sqft']) * total_residential_valuation_ratio
