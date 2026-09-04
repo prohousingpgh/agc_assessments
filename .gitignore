@@ -19,7 +19,12 @@ venv/
 /county_council_districts.parquet
 /predictions.csv
 /predictions.parquet
+/residential_predictions.csv
+/commercial_existing_valuations.csv
 /crexi_data.csv
 /commercial_rents.csv
+/census_tract_land_price_per_sqft.csv
+/municipality_valuation_ratios.csv
+/school_district_valuation_ratios.csv
 /city_council_district_valuation_ratios.csv
 /county_council_district_valuation_ratios.csv
