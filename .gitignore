@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Generated data-pipeline artifacts written to the repo root by scripts/*.py
+# (see ReadMe.md "Convert Data into Usable Format"). These are produced locally
+# from the large county downloads and should not be committed. Anchored to root
+# so the curated files under output/ stay tracked.
+/parcels.csv
+/sales.csv
+/parcels.parquet
+/undermined.parquet
+/market_value.parquet
+/flood_zones.parquet
+/city_council_districts.parquet
+/county_council_districts.parquet
+/predictions.csv
+/predictions.parquet
+/crexi_data.csv
+/commercial_rents.csv
+/city_council_district_valuation_ratios.csv
+/county_council_district_valuation_ratios.csv
